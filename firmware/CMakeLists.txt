@@ -25,7 +25,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} \
     -DNRF52_PAN_74 \
     -mcpu=cortex-m4 \
     -mthumb -mabi=aapcs \
-    -Wall -Werror \
+    -Wall \
     -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
     -ffunction-sections -fdata-sections -fno-strict-aliasing \
     -fno-builtin -fshort-enums \
@@ -47,6 +47,13 @@ set(SRCS
       ${PROJECT_SOURCE_DIR}/main.c
       ${PROJECT_SOURCE_DIR}/log.c
       ${PROJECT_SOURCE_DIR}/address_handler.c
+      ${PROJECT_SOURCE_DIR}/dwm_utils.c
+      ${PROJECT_SOURCE_DIR}/impl_observer.c
+      ${PROJECT_SOURCE_DIR}/impl_anchor.c
+      ${PROJECT_SOURCE_DIR}/decadriver/deca_device.c
+      ${PROJECT_SOURCE_DIR}/decadriver/deca_params_init.c
+      ${PROJECT_SOURCE_DIR}/utils.c
+      ${PROJECT_SOURCE_DIR}/timing.c
 
       ${NRF5_SDK_ROOT}/modules/nrfx/mdk/gcc_startup_nrf52.S
       ${NRF5_SDK_ROOT}/components/libraries/timer/app_timer.c
@@ -89,7 +96,6 @@ include_directories(
     ${PROJECT_SOURCE_DIR}
     ${PROJECT_SOURCE_DIR}/ld.script
     ${PROJECT_SOURCE_DIR}/decadriver
-    ${PROJECT_SOURCE_DIR}/anchor
     ${NRF5_SDK_ROOT}/components/libraries/scheduler
     ${NRF5_SDK_ROOT}/components/libraries/fifo
     ${NRF5_SDK_ROOT}/components/libraries/strerror

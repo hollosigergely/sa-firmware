@@ -1,0 +1,6 @@
+#ifndef TIMING_H
+#define TIMING_H
+
+#define TIMING_DISCOVERY_INTERVAL_US 2000000
+
+#endif // TIMING_H

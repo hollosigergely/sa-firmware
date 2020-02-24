@@ -7,13 +7,13 @@
 
 static dwt_config_t config_long = {
 		4,               // Channel number.
-		DWT_PRF_16M,     // Pulse repetition frequency.
+		DWT_PRF_64M,     // Pulse repetition frequency.
 		DWT_PLEN_1024,    // Preamble length.
 		DWT_PAC64,        // Preamble acquisition chunk size. Used in RX only.
 		18,               // TX preamble code. Used in TX only.
 		18,               // RX preamble code. Used in RX only.
 		1,               // Use non-standard SFD (Boolean)
-		DWT_BR_110K,      // Data rate.
+		DWT_BR_850K,      // Data rate.
 		DWT_PHRMODE_EXT, // PHY header mode.
 		(4096 + 1 + 64 - 64)    // SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only.
 };
@@ -112,6 +112,6 @@ float dwt_estimate_tx_time( dwt_config_t dwt_config, uint16_t framelength, bool 
 
 int main()
 {
-	printf("%f\n", dwt_estimate_tx_time(config_long, 12, false));
+	printf("%f\n", dwt_estimate_tx_time(config_long, 20, false));
 	return 0;
 }

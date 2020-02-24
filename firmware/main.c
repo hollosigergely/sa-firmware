@@ -20,8 +20,11 @@
 #include "nrf_drv_twi.h"
 #include "SEGGER_RTT.h"
 #include "log.h"
+#include "utils.h"
 
 #include "address_handler.h"
+#include "impl_observer.h"
+#include "impl_anchor.h"
 
 #define TAG "main"
 //  debugging with gdb: ./JLinkGDBServer -if SWD -device nRF51822
@@ -41,8 +44,10 @@ int main(void)
 	uint64_t chipID = addr_handler_get_chip_id();
 	LOGI(TAG,"Chip id: %llu\n", chipID);
 
+	utils_init();
 
-	while(1) {}
+	impl_anchor_init();
+	impl_anchor_loop();
 }
 
 
