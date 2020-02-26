@@ -9,7 +9,7 @@
 #define TIMING_TAG_COUNT                10
 
 #define TIMING_ANCHOR_MESSAGE_LENGTH_US                       5000
-#define TIMING_ANCHOR_MESSAGE_TX_PREFIX_TIME_US               (1051 + 400 + 200)
+#define TIMING_MESSAGE_TX_PREFIX_TIME_US                      (1051 + 400 + 200)
 
 #define TIMING_TAG_MESSAGE_LENGTH_US           5000
 

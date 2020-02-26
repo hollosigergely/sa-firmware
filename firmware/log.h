@@ -27,7 +27,7 @@
 #define LOGI(tag,msg,...)
 #endif
 
-//#define TRACE_LOG
+#define TRACE_LOG
 #ifdef TRACE_LOG
 #define LOGT(tag,msg,...) { \
     char _out[256]; \

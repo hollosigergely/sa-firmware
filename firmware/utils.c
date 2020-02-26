@@ -24,8 +24,8 @@ void utils_start_execution_timer()
 	nrf_drv_timer_enable(&m_execution_timer);
 }
 
-double utils_stop_execution_timer()
+uint32_t utils_stop_execution_timer()
 {
 	uint32_t counter = nrf_drv_timer_capture(&m_execution_timer, NRF_TIMER_CC_CHANNEL0);
-	return counter / 16e6;
+	return counter >> 4;
 }

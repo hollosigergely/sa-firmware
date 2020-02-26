@@ -23,14 +23,24 @@ typedef enum {
 	ANCHOR_STATE__TAG_FRAME = 5
 } anchor_state_t;
 
+typedef enum
+{
+	EVENT_RX = 1,
+	EVENT_TIMER = 2,
+	EVENT_SF_BEGIN = 3
+} event_type_t;
+
 const static nrf_drv_timer_t	m_frame_timer = NRF_DRV_TIMER_INSTANCE(1);
+static int32_t					m_frame_timer_compensation_us = 0;
 static anchor_state_t			m_anchor_state = ANCHOR_STATE__DISCOVERY;
 static uint16_t					m_anchor_id = 1;
 static uint8_t					m_superframe_id = 0;
 static uint8_t					m_rx_buffer[SF_MAX_MESSAGE_SIZE];
 
 static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context);
-static void trigger_frame_timer(uint32_t us);
+static void restart_frame_timer();
+static void set_frame_timer(uint32_t us);
+static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t datalength);
 
 
 static void set_anchor_state(anchor_state_t newstate)
@@ -38,44 +48,25 @@ static void set_anchor_state(anchor_state_t newstate)
 	m_anchor_state = newstate;
 }
 
+inline static uint32_t get_slot_time_by_message(uint64_t rx_ts)
+{
+	uint64_t systime = dwm1000_get_system_time_u64();
+
+	return (systime-rx_ts)/UUS_TO_DWT_TIME + TIMING_MESSAGE_TX_PREFIX_TIME_US;
+}
+
 static void mac_rxok_callback_impl(const dwt_cb_data_t *data)
 {
-	if(m_anchor_state == ANCHOR_STATE__DISCOVERY)
+	if(data->datalength - 2 > SF_MAX_MESSAGE_SIZE)
 	{
-		if(data->datalength - 2 > SF_MAX_MESSAGE_SIZE)
-		{
-			LOGE(TAG,"oversized msg\n");
-			dwt_rxenable(0);
-			return;
-		}
-
-		dwt_readrxdata(m_rx_buffer, data->datalength - 2, 0);
-		uint64_t rxts = dwm1000_get_rx_timestamp_u64();
-		uint64_t systime = dwm1000_get_system_time_u64();
-
-		uint32_t slot_time_us = (systime-rxts)/UUS_TO_DWT_TIME + TIMING_ANCHOR_MESSAGE_TX_PREFIX_TIME_US;
-		LOGI(TAG,"st %ld\n", slot_time_us);
-
-		sf_header_t* hdr = (sf_header_t*)m_rx_buffer;
-		if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
-		{
-			set_anchor_state(ANCHOR_STATE__WAITING_NEXT_SF);
-
-			uint32_t next_sf_start = (TIMING_ANCHOR_COUNT - hdr->src_id) * TIMING_ANCHOR_MESSAGE_LENGTH_US - slot_time_us +
-					TIMING_TAG_COUNT * TIMING_TAG_MESSAGE_LENGTH_US;
-
-			LOGI(TAG,"+%ld\n", next_sf_start)
-
-			trigger_frame_timer(next_sf_start);
-		}
-
+		LOGE(TAG,"oversized msg\n");
 		dwt_rxenable(0);
+		return;
 	}
-	else if(m_anchor_state == ANCHOR_STATE__BEFORE_ANCHOR_MSG ||
-			m_anchor_state == ANCHOR_STATE__AFTER_ANCHOR_MSG)
-	{
 
-	}
+	dwt_readrxdata(m_rx_buffer, data->datalength - 2, 0);
+
+	event_handler(EVENT_RX, m_rx_buffer, data->datalength - 2);
 
 	dwt_rxenable(0);
 }
@@ -115,12 +106,34 @@ static void gpiote_init()
 	nrf_drv_gpiote_in_event_enable(DW1000_IRQ, true);
 }
 
-static void trigger_frame_timer(uint32_t us) {
-	nrf_drv_timer_disable(&m_frame_timer);
+static void restart_frame_timer() {
+	m_frame_timer_compensation_us = 0;
+
+	nrf_drv_timer_pause(&m_frame_timer);
 	nrf_drv_timer_clear(&m_frame_timer);
-	uint32_t time_ticks = nrf_drv_timer_us_to_ticks(&m_frame_timer, us);
-	nrf_drv_timer_extended_compare(&m_frame_timer, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_STOP_MASK, true);
-	nrf_drv_timer_enable(&m_frame_timer);
+	uint32_t time_ticks = nrf_drv_timer_us_to_ticks(&m_frame_timer, TIMING_SUPERFRAME_LENGTH_US);
+	nrf_drv_timer_compare(&m_frame_timer, NRF_TIMER_CC_CHANNEL1, time_ticks, true);
+	nrf_drv_timer_resume(&m_frame_timer);
+}
+
+static void set_frame_timer(uint32_t us) {
+	nrf_drv_timer_pause(&m_frame_timer);
+	uint32_t time_ticks = nrf_drv_timer_us_to_ticks(&m_frame_timer, us - m_frame_timer_compensation_us);
+	nrf_drv_timer_compare(&m_frame_timer, NRF_TIMER_CC_CHANNEL0, time_ticks, true);
+	nrf_drv_timer_resume(&m_frame_timer);
+}
+
+static void compensate_frame_timer(uint32_t c)
+{
+	uint32_t state = nrf_drv_timer_capture(&m_frame_timer, NRF_TIMER_CC_CHANNEL2) >> 4;
+	LOGT(TAG,"state: %ld\n", state);
+
+	m_frame_timer_compensation_us = c - state;
+
+	nrf_drv_timer_pause(&m_frame_timer);
+	uint32_t time_ticks = nrf_drv_timer_us_to_ticks(&m_frame_timer, TIMING_SUPERFRAME_LENGTH_US - m_frame_timer_compensation_us);
+	nrf_drv_timer_compare(&m_frame_timer, NRF_TIMER_CC_CHANNEL1, time_ticks, true);
+	nrf_drv_timer_resume(&m_frame_timer);
 }
 
 static void transmit_anchor_msg() {
@@ -130,7 +143,7 @@ static void transmit_anchor_msg() {
 	msg.tr_id = m_superframe_id;
 
 	uint64_t sys_ts = dwm1000_get_system_time_u64();
-	uint32_t tx_ts_32 = (sys_ts + (TIMING_ANCHOR_MESSAGE_TX_PREFIX_TIME_US * UUS_TO_DWT_TIME)) >> 8;
+	uint32_t tx_ts_32 = (sys_ts + (TIMING_MESSAGE_TX_PREFIX_TIME_US * UUS_TO_DWT_TIME)) >> 8;
 	uint64_t tx_ts = (((uint64_t)(tx_ts_32 & 0xFFFFFFFEUL)) << 8);
 
 	dwm1000_timestamp_u64_to_pu8(tx_ts, msg.tx_ts);
@@ -145,55 +158,115 @@ static void transmit_anchor_msg() {
 	}
 }
 
-static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context)
+static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t datalength)
 {
-	LOGT(TAG, "FT %d\n", m_anchor_state);
+	LOGT(TAG, "S %d, E %d (%ld)\n", m_anchor_state, event_type, (nrf_drv_timer_capture(&m_frame_timer, NRF_TIMER_CC_CHANNEL2) >> 4));
 
-	if(//m_anchor_state == ANCHOR_STATE__DISCOVERY ||
-			m_anchor_state == ANCHOR_STATE__WAITING_NEXT_SF ||
+	if(event_type == EVENT_SF_BEGIN)
+	{
+		restart_frame_timer();
+		LOGT(TAG, "SF\n");
+	}
+
+	if(m_anchor_state == ANCHOR_STATE__DISCOVERY)
+	{
+		if(event_type == EVENT_RX)
+		{
+			// Found anchor message, sync
+
+			sf_header_t* hdr = (sf_header_t*)data;
+			if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
+			{
+				set_anchor_state(ANCHOR_STATE__WAITING_NEXT_SF);
+
+				uint32_t slot_time_us = get_slot_time_by_message(dwm1000_get_rx_timestamp_u64());
+				uint32_t sf_time_us = hdr->src_id * TIMING_ANCHOR_MESSAGE_LENGTH_US + slot_time_us;
+
+				compensate_frame_timer(sf_time_us);
+
+				LOGT(TAG,"SFT %ld\n", sf_time_us)
+
+				sf_anchor_msg_t* msg = (sf_anchor_msg_t*)data;
+				m_superframe_id = msg->tr_id;
+			}
+		}
+		else if(event_type == EVENT_SF_BEGIN)
+		{
+			// No sync message received, start superframe
+			m_superframe_id++;
+			if(m_superframe_id > 5)
+			{
+				set_anchor_state(ANCHOR_STATE__WAITING_NEXT_SF);
+			}
+		}
+	}
+	else if(m_anchor_state == ANCHOR_STATE__WAITING_NEXT_SF ||
 			m_anchor_state == ANCHOR_STATE__TAG_FRAME)
 	{
-		LOGT(TAG, "SF\n");
-
-		m_superframe_id++;
-
-		uint32_t delay = m_anchor_id * TIMING_ANCHOR_MESSAGE_LENGTH_US;
-		if(delay == 0)
+		if(event_type == EVENT_SF_BEGIN)
 		{
-			trigger_frame_timer(TIMING_ANCHOR_MESSAGE_LENGTH_US);
+			m_superframe_id++;
 
-			transmit_anchor_msg();
-
-			set_anchor_state(ANCHOR_STATE__SENDING_ANCHOR_MSG);
+			uint32_t delay = m_anchor_id * TIMING_ANCHOR_MESSAGE_LENGTH_US;
+			if(delay == 0)
+			{
+				set_frame_timer(TIMING_ANCHOR_MESSAGE_LENGTH_US);
+				transmit_anchor_msg();
+				set_anchor_state(ANCHOR_STATE__SENDING_ANCHOR_MSG);
+			}
+			else
+			{
+				set_frame_timer(m_anchor_id * TIMING_ANCHOR_MESSAGE_LENGTH_US);
+				set_anchor_state(ANCHOR_STATE__BEFORE_ANCHOR_MSG);
+				//dwt_rxenable(0);
+			}
 		}
-		else
-		{
-			trigger_frame_timer(m_anchor_id * TIMING_ANCHOR_MESSAGE_LENGTH_US);
-			set_anchor_state(ANCHOR_STATE__BEFORE_ANCHOR_MSG);
-		}
-
-
 	}
 	else if(m_anchor_state == ANCHOR_STATE__BEFORE_ANCHOR_MSG)
 	{
-		trigger_frame_timer(TIMING_ANCHOR_MESSAGE_LENGTH_US);
+		if(event_type == EVENT_TIMER)
+		{
+			set_frame_timer((m_anchor_id + 1) * TIMING_ANCHOR_MESSAGE_LENGTH_US);
+			transmit_anchor_msg();
+			set_anchor_state(ANCHOR_STATE__SENDING_ANCHOR_MSG);
+		}
+		else if(event_type == EVENT_RX)
+		{
+			// Found anchor message, sync
 
-		transmit_anchor_msg();
+			sf_header_t* hdr = (sf_header_t*)data;
+			if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
+			{
+				uint32_t slot_time_us = get_slot_time_by_message(dwm1000_get_rx_timestamp_u64());
+				uint32_t sf_time_us = hdr->src_id * TIMING_ANCHOR_MESSAGE_LENGTH_US + slot_time_us;
 
-		set_anchor_state(ANCHOR_STATE__SENDING_ANCHOR_MSG);
+				LOGT(TAG,"SFT %ld\n", sf_time_us)
+
+				compensate_frame_timer(sf_time_us);
+			}
+		}
 	}
 	else if(m_anchor_state == ANCHOR_STATE__SENDING_ANCHOR_MSG)
 	{
-		trigger_frame_timer((TIMING_ANCHOR_COUNT - m_anchor_id - 1) * TIMING_ANCHOR_MESSAGE_LENGTH_US);
+		set_frame_timer(TIMING_ANCHOR_COUNT * TIMING_ANCHOR_MESSAGE_LENGTH_US);
 		set_anchor_state(ANCHOR_STATE__AFTER_ANCHOR_MSG);
+		//dwt_rxenable(0);
 	}
 	else if(m_anchor_state == ANCHOR_STATE__AFTER_ANCHOR_MSG)
 	{
-		trigger_frame_timer(TIMING_TAG_COUNT * TIMING_TAG_MESSAGE_LENGTH_US);
 		set_anchor_state(ANCHOR_STATE__TAG_FRAME);
+		//dwt_rxenable(0);
 	}
 }
 
+static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context)
+{
+	utils_start_execution_timer();
+	if(event_type == NRF_TIMER_EVENT_COMPARE0)
+		event_handler(EVENT_TIMER, NULL, 0);
+	else if(event_type == NRF_TIMER_EVENT_COMPARE1)
+		event_handler(EVENT_SF_BEGIN, NULL, 0);
+}
 
 int impl_anchor_init()
 {
@@ -220,8 +293,10 @@ int impl_anchor_init()
 	};
 	err_code = nrf_drv_timer_init(&m_frame_timer, &timer_cfg, frame_timer_event_handler);
 	APP_ERROR_CHECK(err_code);
+	nrf_drv_timer_enable(&m_frame_timer);
+	nrf_drv_timer_pause(&m_frame_timer);
 
-	trigger_frame_timer(TIMING_DISCOVERY_INTERVAL_US);
+	restart_frame_timer();
 
 	dwt_rxenable(0);
 
@@ -232,14 +307,14 @@ void impl_anchor_loop()
 {
 	while(1)
 	{
-		__WFI();
-		__WFI();
+		//__WFI();
+		//__WFI();
 		/*dwt_forcetrxoff();
 		dwt_writetxdata(4, (uint8_t*)"AB", 0);
 		dwt_writetxfctrl(4, 0, 1);   // add CRC
-		dwt_starttx(DWT_START_TX_IMMEDIATE);
+		dwt_starttx(DWT_START_TX_IMMEDIATE);*/
 
-		nrf_delay_ms(500);*/
+		nrf_delay_ms(500);
 	}
 }
 
