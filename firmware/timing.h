@@ -17,11 +17,22 @@
 #define TIMING_SUPERFRAME_LENGTH_MS     (TIMING_SUPERFRAME_LENGTH_US/1000)
 
 
+#define SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE    0x01
+#define SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE       0x02
+
+typedef struct
+{
+    uint8_t          fctrl;
+    uint8_t          padding;
+    uint16_t         src_id;
+} __attribute__((packed)) sf_header_t;
+
 typedef struct {
-    uint8_t         fctrl;
+    sf_header_t     hdr;
     uint8_t         tr_id;
-    uint16_t        src_id;
     uint8_t         tx_ts[5];
-} __attribute((__packed__)) sf_anchor_msg_t;
+} __attribute__((packed)) sf_anchor_msg_t;
+
+#define SF_MAX_MESSAGE_SIZE    (sizeof(sf_anchor_msg_t))
 
 #endif // TIMING_H

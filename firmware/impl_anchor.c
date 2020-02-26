@@ -16,18 +16,22 @@
 
 typedef enum {
 	ANCHOR_STATE__DISCOVERY = 0,
-	ANCHOR_STATE__BEFORE_ANCHOR_MSG = 1,
-	ANCHOR_STATE__SENDING_ANCHOR_MSG = 2,
-	ANCHOR_STATE__AFTER_ANCHOR_MSG = 3,
-	ANCHOR_STATE__TAG_FRAME = 4
+	ANCHOR_STATE__WAITING_NEXT_SF = 1,
+	ANCHOR_STATE__BEFORE_ANCHOR_MSG = 2,
+	ANCHOR_STATE__SENDING_ANCHOR_MSG = 3,
+	ANCHOR_STATE__AFTER_ANCHOR_MSG = 4,
+	ANCHOR_STATE__TAG_FRAME = 5
 } anchor_state_t;
 
 const static nrf_drv_timer_t	m_frame_timer = NRF_DRV_TIMER_INSTANCE(1);
 static anchor_state_t			m_anchor_state = ANCHOR_STATE__DISCOVERY;
-static uint16_t					m_anchor_id = 0;
+static uint16_t					m_anchor_id = 1;
 static uint8_t					m_superframe_id = 0;
+static uint8_t					m_rx_buffer[SF_MAX_MESSAGE_SIZE];
 
 static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context);
+static void trigger_frame_timer(uint32_t us);
+
 
 static void set_anchor_state(anchor_state_t newstate)
 {
@@ -36,11 +40,44 @@ static void set_anchor_state(anchor_state_t newstate)
 
 static void mac_rxok_callback_impl(const dwt_cb_data_t *data)
 {
-	if(m_anchor_state == ANCHOR_STATE__BEFORE_ANCHOR_MSG ||
+	if(m_anchor_state == ANCHOR_STATE__DISCOVERY)
+	{
+		if(data->datalength - 2 > SF_MAX_MESSAGE_SIZE)
+		{
+			LOGE(TAG,"oversized msg\n");
+			dwt_rxenable(0);
+			return;
+		}
+
+		dwt_readrxdata(m_rx_buffer, data->datalength - 2, 0);
+		uint64_t rxts = dwm1000_get_rx_timestamp_u64();
+		uint64_t systime = dwm1000_get_system_time_u64();
+
+		uint32_t slot_time_us = (systime-rxts)/UUS_TO_DWT_TIME + TIMING_ANCHOR_MESSAGE_TX_PREFIX_TIME_US;
+		LOGI(TAG,"st %ld\n", slot_time_us);
+
+		sf_header_t* hdr = (sf_header_t*)m_rx_buffer;
+		if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
+		{
+			set_anchor_state(ANCHOR_STATE__WAITING_NEXT_SF);
+
+			uint32_t next_sf_start = (TIMING_ANCHOR_COUNT - hdr->src_id) * TIMING_ANCHOR_MESSAGE_LENGTH_US - slot_time_us +
+					TIMING_TAG_COUNT * TIMING_TAG_MESSAGE_LENGTH_US;
+
+			LOGI(TAG,"+%ld\n", next_sf_start)
+
+			trigger_frame_timer(next_sf_start);
+		}
+
+		dwt_rxenable(0);
+	}
+	else if(m_anchor_state == ANCHOR_STATE__BEFORE_ANCHOR_MSG ||
 			m_anchor_state == ANCHOR_STATE__AFTER_ANCHOR_MSG)
 	{
 
 	}
+
+	dwt_rxenable(0);
 }
 
 static void mac_rxerr_callback_impl(const dwt_cb_data_t *data)
@@ -88,8 +125,8 @@ static void trigger_frame_timer(uint32_t us) {
 
 static void transmit_anchor_msg() {
 	sf_anchor_msg_t	msg;
-	msg.src_id = m_anchor_id;
-	msg.fctrl = 0;
+	msg.hdr.src_id = m_anchor_id;
+	msg.hdr.fctrl = SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE;
 	msg.tr_id = m_superframe_id;
 
 	uint64_t sys_ts = dwm1000_get_system_time_u64();
@@ -110,12 +147,13 @@ static void transmit_anchor_msg() {
 
 static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context)
 {
-	LOGI(TAG, "FT %d\n", m_anchor_state);
+	LOGT(TAG, "FT %d\n", m_anchor_state);
 
-	if(m_anchor_state == ANCHOR_STATE__DISCOVERY ||
+	if(//m_anchor_state == ANCHOR_STATE__DISCOVERY ||
+			m_anchor_state == ANCHOR_STATE__WAITING_NEXT_SF ||
 			m_anchor_state == ANCHOR_STATE__TAG_FRAME)
 	{
-		LOGI(TAG, "SF\n");
+		LOGT(TAG, "SF\n");
 
 		m_superframe_id++;
 

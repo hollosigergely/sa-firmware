@@ -73,8 +73,13 @@ int main(int argc, char** argv)
 			printf("%02X", buffer[i] & 0xFF);
 		}
 
-		sf_anchor_msg_t* msg = (sf_anchor_msg_t*)buffer;
-		printf("     # AM, src: %04X, trid: %d, txts: %"PRIu64, msg->src_id, msg->tr_id, pu8_to_u64(msg->tx_ts));
+		sf_header_t* hdr = (sf_header_t*)buffer;
+
+		if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
+		{
+			sf_anchor_msg_t* msg = (sf_anchor_msg_t*)buffer;
+			printf("     # AM, src: %04X, trid: %d, txts: %"PRIu64, msg->hdr.src_id, msg->tr_id, pu8_to_u64(msg->tx_ts));
+		}
 
 		printf("\n");
 
