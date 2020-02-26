@@ -54,6 +54,7 @@ set(SRCS
       ${PROJECT_SOURCE_DIR}/decadriver/deca_params_init.c
       ${PROJECT_SOURCE_DIR}/utils.c
       ${PROJECT_SOURCE_DIR}/timing.c
+      ${PROJECT_SOURCE_DIR}/messages.c
 
       ${NRF5_SDK_ROOT}/modules/nrfx/mdk/gcc_startup_nrf52.S
       ${NRF5_SDK_ROOT}/components/libraries/timer/app_timer.c

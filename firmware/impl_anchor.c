@@ -1,5 +1,5 @@
 #include "impl_anchor.h"
-
+#include <stdint.h>
 
 #include "dwm_utils.h"
 #include "log.h"
@@ -15,25 +15,44 @@
 #define TAG "anchor"
 
 typedef enum {
-	ANCHOR_STATE__WAITING_SYNC = 0
+	ANCHOR_STATE__DISCOVERY = 0,
+	ANCHOR_STATE__BEFORE_ANCHOR_MSG = 1,
+	ANCHOR_STATE__SENDING_ANCHOR_MSG = 2,
+	ANCHOR_STATE__AFTER_ANCHOR_MSG = 3,
+	ANCHOR_STATE__TAG_FRAME = 4
 } anchor_state_t;
 
 const static nrf_drv_timer_t	m_frame_timer = NRF_DRV_TIMER_INSTANCE(1);
-static anchor_state_t			m_anchor_state = ANCHOR_STATE__WAITING_SYNC;
+static anchor_state_t			m_anchor_state = ANCHOR_STATE__DISCOVERY;
+static uint16_t					m_anchor_id = 0;
+static uint8_t					m_superframe_id = 0;
+
+static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context);
+
+static void set_anchor_state(anchor_state_t newstate)
+{
+	m_anchor_state = newstate;
+}
 
 static void mac_rxok_callback_impl(const dwt_cb_data_t *data)
 {
+	if(m_anchor_state == ANCHOR_STATE__BEFORE_ANCHOR_MSG ||
+			m_anchor_state == ANCHOR_STATE__AFTER_ANCHOR_MSG)
+	{
 
+	}
 }
 
 static void mac_rxerr_callback_impl(const dwt_cb_data_t *data)
 {
 	LOGI(TAG, "rx err\n");
 
-	if(m_anchor_state == ANCHOR_STATE__WAITING_SYNC)
-	{
-		dwt_rxenable(0);
-	}
+	dwt_rxenable(0);
+}
+
+static void mac_txok_callback_impl(const dwt_cb_data_t* data)
+{
+	dwt_rxenable(0);
 }
 
 static void gpiote_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
@@ -59,13 +78,81 @@ static void gpiote_init()
 	nrf_drv_gpiote_in_event_enable(DW1000_IRQ, true);
 }
 
+static void trigger_frame_timer(uint32_t us) {
+	nrf_drv_timer_disable(&m_frame_timer);
+	nrf_drv_timer_clear(&m_frame_timer);
+	uint32_t time_ticks = nrf_drv_timer_us_to_ticks(&m_frame_timer, us);
+	nrf_drv_timer_extended_compare(&m_frame_timer, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_STOP_MASK, true);
+	nrf_drv_timer_enable(&m_frame_timer);
+}
+
+static void transmit_anchor_msg() {
+	sf_anchor_msg_t	msg;
+	msg.src_id = m_anchor_id;
+	msg.fctrl = 0;
+	msg.tr_id = m_superframe_id;
+
+	uint64_t sys_ts = dwm1000_get_system_time_u64();
+	uint32_t tx_ts_32 = (sys_ts + (TIMING_ANCHOR_MESSAGE_TX_PREFIX_TIME_US * UUS_TO_DWT_TIME)) >> 8;
+	uint64_t tx_ts = (((uint64_t)(tx_ts_32 & 0xFFFFFFFEUL)) << 8);
+
+	dwm1000_timestamp_u64_to_pu8(tx_ts, msg.tx_ts);
+
+	dwt_forcetrxoff();
+	dwt_writetxdata(sizeof(sf_anchor_msg_t) + 2, (uint8_t*)&msg, 0);
+	dwt_writetxfctrl(sizeof(sf_anchor_msg_t) + 2, 0, false);
+	dwt_setdelayedtrxtime(tx_ts_32);
+	if(dwt_starttx(DWT_START_TX_DELAYED) != DWT_SUCCESS)
+	{
+		LOGE(TAG, "err: starttx\n");
+	}
+}
+
 static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context)
 {
 	LOGI(TAG, "FT %d\n", m_anchor_state);
 
-	if(m_anchor_state == ANCHOR_STATE__WAITING_SYNC)
+	if(m_anchor_state == ANCHOR_STATE__DISCOVERY ||
+			m_anchor_state == ANCHOR_STATE__TAG_FRAME)
 	{
-		LOGI(TAG, "sync exp\n");
+		LOGI(TAG, "SF\n");
+
+		m_superframe_id++;
+
+		uint32_t delay = m_anchor_id * TIMING_ANCHOR_MESSAGE_LENGTH_US;
+		if(delay == 0)
+		{
+			trigger_frame_timer(TIMING_ANCHOR_MESSAGE_LENGTH_US);
+
+			transmit_anchor_msg();
+
+			set_anchor_state(ANCHOR_STATE__SENDING_ANCHOR_MSG);
+		}
+		else
+		{
+			trigger_frame_timer(m_anchor_id * TIMING_ANCHOR_MESSAGE_LENGTH_US);
+			set_anchor_state(ANCHOR_STATE__BEFORE_ANCHOR_MSG);
+		}
+
+
+	}
+	else if(m_anchor_state == ANCHOR_STATE__BEFORE_ANCHOR_MSG)
+	{
+		trigger_frame_timer(TIMING_ANCHOR_MESSAGE_LENGTH_US);
+
+		transmit_anchor_msg();
+
+		set_anchor_state(ANCHOR_STATE__SENDING_ANCHOR_MSG);
+	}
+	else if(m_anchor_state == ANCHOR_STATE__SENDING_ANCHOR_MSG)
+	{
+		trigger_frame_timer((TIMING_ANCHOR_COUNT - m_anchor_id - 1) * TIMING_ANCHOR_MESSAGE_LENGTH_US);
+		set_anchor_state(ANCHOR_STATE__AFTER_ANCHOR_MSG);
+	}
+	else if(m_anchor_state == ANCHOR_STATE__AFTER_ANCHOR_MSG)
+	{
+		trigger_frame_timer(TIMING_TAG_COUNT * TIMING_TAG_MESSAGE_LENGTH_US);
+		set_anchor_state(ANCHOR_STATE__TAG_FRAME);
 	}
 }
 
@@ -73,6 +160,7 @@ static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_cont
 int impl_anchor_init()
 {
 	LOGI(TAG,"mode: anchor\n");
+	LOGI(TAG,"sf length: %d\n", TIMING_SUPERFRAME_LENGTH_MS);
 
 	NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
 	NRF_CLOCK->TASKS_HFCLKSTART = 1;
@@ -82,7 +170,7 @@ int impl_anchor_init()
 	LOGI(TAG,"initialize dw1000 phy\n");
 	dwm1000_phy_init();
 
-	dwt_setcallbacks(NULL, mac_rxok_callback_impl, NULL, mac_rxerr_callback_impl);
+	dwt_setcallbacks(mac_txok_callback_impl, mac_rxok_callback_impl, NULL, mac_rxerr_callback_impl);
 
 	uint32_t err_code;
 	nrf_drv_timer_config_t timer_cfg = {
@@ -95,9 +183,7 @@ int impl_anchor_init()
 	err_code = nrf_drv_timer_init(&m_frame_timer, &timer_cfg, frame_timer_event_handler);
 	APP_ERROR_CHECK(err_code);
 
-	uint32_t time_ticks = nrf_drv_timer_us_to_ticks(&m_frame_timer, TIMING_DISCOVERY_INTERVAL_US);
-	nrf_drv_timer_extended_compare(&m_frame_timer, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_STOP_MASK, true);
-	nrf_drv_timer_enable(&m_frame_timer);
+	trigger_frame_timer(TIMING_DISCOVERY_INTERVAL_US);
 
 	dwt_rxenable(0);
 

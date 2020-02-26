@@ -29,8 +29,12 @@
 #define DW1000_MOSI_PIN		20
 #define DW1000_SS_PIN		17
 
+#define UUS_TO_DWT_TIME				63897
+
 uint64_t dwm1000_get_system_time_u64(void);
 uint64_t dwm1000_get_rx_timestamp_u64(void);
+
+void dwm1000_timestamp_u64_to_pu8(uint64_t ts, uint8_t* out);
 
 int dwm1000_phy_init();
 void dwm1000_phy_release();

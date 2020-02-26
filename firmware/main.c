@@ -48,6 +48,8 @@ int main(void)
 
 	impl_anchor_init();
 	impl_anchor_loop();
+	//impl_observer_init();
+	//impl_observer_loop();
 }
 
 

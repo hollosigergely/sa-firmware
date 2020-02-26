@@ -15,7 +15,7 @@ static dwt_config_t config_long = {
 		1,               // Use non-standard SFD (Boolean)
 		DWT_BR_850K,      // Data rate.
 		DWT_PHRMODE_EXT, // PHY header mode.
-		(4096 + 1 + 64 - 64)    // SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only.
+		(1024 + 1 + 64 - 64)    // SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only.
 };
 
 
@@ -112,6 +112,6 @@ float dwt_estimate_tx_time( dwt_config_t dwt_config, uint16_t framelength, bool 
 
 int main()
 {
-	printf("%f\n", dwt_estimate_tx_time(config_long, 20, false));
+	printf("%f\n", dwt_estimate_tx_time(config_long, 9, true));
 	return 0;
 }

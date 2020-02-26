@@ -10,22 +10,21 @@
 #define TX_RX_BUF_LENGTH			1024
 #define POLL_TX_TO_RESP_RX_DLY_UUS	140
 
-
 #if (SPI0_ENABLED == 1)
 static const nrf_drv_spi_t m_spi_master_0 = NRF_DRV_SPI_INSTANCE(0);
 #endif
 
 static dwt_config_t dwt_config = {
-        4,               // Channel number.
-        DWT_PRF_64M,     // Pulse repetition frequency.
-        DWT_PLEN_4096,    // Preamble length.
-        DWT_PAC64,        // Preamble acquisition chunk size. Used in RX only.
-		19,               // TX preamble code. Used in TX only. (18->local, 19->wtp)
-		19,               // RX preamble code. Used in RX only. (18->local, 19->wtp)
-        1,               // Use non-standard SFD (Boolean)
-        DWT_BR_850K,      // Data rate.
-        DWT_PHRMODE_EXT, // PHY header mode.
-        (4096 + 1 + 64 - 64)    // SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only.
+		4,               // Channel number.
+		DWT_PRF_64M,     // Pulse repetition frequency.
+		DWT_PLEN_1024,    // Preamble length.
+		DWT_PAC64,        // Preamble acquisition chunk size. Used in RX only.
+		18,               // TX preamble code. Used in TX only.
+		18,               // RX preamble code. Used in RX only.
+		1,               // Use non-standard SFD (Boolean)
+		DWT_BR_850K,      // Data rate.
+		DWT_PHRMODE_EXT, // PHY header mode.
+		(1024 + 1 + 64 - 64)    // SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only.
 };
 
 
@@ -33,19 +32,6 @@ static inline uint16_t min(uint16_t a, uint16_t b)
 {
 	return (a<b)?(a):(b);
 }
-
-/*static dwt_config_t dwt_config = {
-		5,               // Channel number.
-        DWT_PRF_64M,     // Pulse repetition frequency.
-        DWT_PLEN_128,    // Preamble length.
-        DWT_PAC8,        // Preamble acquisition chunk size. Used in RX only.
-		9,               // TX preamble code. Used in TX only.
-		9,               // RX preamble code. Used in RX only.
-        0,               // Use non-standard SFD (Boolean)
-        DWT_BR_6M8,      // Data rate.
-        DWT_PHRMODE_STD, // PHY header mode.
-        (129 + 8 - 8)    // SFD timeout (preamble length + 1 + SFD length - PAC size). Used in RX only.
-};*/
 
 
 static uint8_t m_rx_data[TX_RX_BUF_LENGTH] = {0};
@@ -76,6 +62,15 @@ uint64_t dwm1000_get_rx_timestamp_u64(void)
         ts |= ts_tab[i];
     }
     return ts;
+}
+
+void dwm1000_timestamp_u64_to_pu8(uint64_t ts, uint8_t *out)
+{
+	for(int i = 0; i <= 4; i++)
+	{
+		out[i] = ts & 0xFF;
+		ts >>= 8;
+	}
 }
 
 
@@ -328,11 +323,4 @@ void dwm1000_phy_release()
 	reset_dw1000();
 	deinit_dw1000_ios();
 }
-
-
-
-
-
-
-
 
