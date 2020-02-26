@@ -4,6 +4,7 @@
 #include "dwm_utils.h"
 #include "log.h"
 #include "utils.h"
+#include "address_handler.h"
 
 #include "nrf_gpio.h"
 #include "nrf_drv_gpiote.h"
@@ -274,7 +275,21 @@ static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_cont
 
 int impl_anchor_init()
 {
+	m_anchor_id = addr_handler_get_virtual_addr();
+	if(m_anchor_id == 0xFFFF)
+	{
+		LOGE(TAG, "no address specified\n");
+		for(;;);
+	}
+
+	if(m_anchor_id >= TIMING_ANCHOR_COUNT)
+	{
+		LOGE(TAG, "anchor count reached\n");
+		for(;;);
+	}
+
 	LOGI(TAG,"mode: anchor\n");
+	LOGI(TAG,"addr: %04X\n", m_anchor_id);
 	LOGI(TAG,"sf length: %d\n", TIMING_SUPERFRAME_LENGTH_MS);
 
 	NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;

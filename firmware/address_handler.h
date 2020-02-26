@@ -6,7 +6,7 @@
 
 uint64_t addr_handler_get_chip_id();
 uint16_t addr_handler_get();
-bool isAnchor(uint16_t address);
+uint16_t addr_handler_get_virtual_addr();
 
 
 #endif // ADDRESS_HANDLER_H
