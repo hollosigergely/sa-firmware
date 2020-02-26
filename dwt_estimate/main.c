@@ -112,6 +112,6 @@ float dwt_estimate_tx_time( dwt_config_t dwt_config, uint16_t framelength, bool 
 
 int main()
 {
-	printf("%f\n", dwt_estimate_tx_time(config_long, 10, false));
+	printf("%f\n", dwt_estimate_tx_time(config_long, 10, true));
 	return 0;
 }

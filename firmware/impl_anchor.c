@@ -14,6 +14,8 @@
 
 #define TAG "anchor"
 
+#define SYNC_COMPENSATION_CONST_US	150
+
 typedef enum {
 	ANCHOR_STATE__DISCOVERY = 0,
 	ANCHOR_STATE__WAITING_NEXT_SF = 1,
@@ -142,6 +144,7 @@ static void transmit_anchor_msg() {
 	msg.hdr.fctrl = SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE;
 	msg.tr_id = m_superframe_id;
 
+	utils_start_execution_timer();
 	uint64_t sys_ts = dwm1000_get_system_time_u64();
 	uint32_t tx_ts_32 = (sys_ts + (TIMING_MESSAGE_TX_PREFIX_TIME_US * UUS_TO_DWT_TIME)) >> 8;
 	uint64_t tx_ts = (((uint64_t)(tx_ts_32 & 0xFFFFFFFEUL)) << 8);
@@ -156,6 +159,7 @@ static void transmit_anchor_msg() {
 	{
 		LOGE(TAG, "err: starttx\n");
 	}
+	LOGT(TAG,"proc: %ld\n", utils_stop_execution_timer());
 }
 
 static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t datalength)
@@ -194,8 +198,9 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 		{
 			// No sync message received, start superframe
 			m_superframe_id++;
-			if(m_superframe_id > 5)
+			if(m_superframe_id > TIMING_DISCOVERY_SUPERFRAME_COUNT)
 			{
+				m_superframe_id = 0;
 				set_anchor_state(ANCHOR_STATE__WAITING_NEXT_SF);
 			}
 		}
@@ -240,9 +245,8 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 				uint32_t slot_time_us = get_slot_time_by_message(dwm1000_get_rx_timestamp_u64());
 				uint32_t sf_time_us = hdr->src_id * TIMING_ANCHOR_MESSAGE_LENGTH_US + slot_time_us;
 
-				LOGT(TAG,"SFT %ld\n", sf_time_us)
-
-				compensate_frame_timer(sf_time_us);
+				compensate_frame_timer(sf_time_us + SYNC_COMPENSATION_CONST_US);
+				LOGT(TAG,"SFT %ld\n", sf_time_us);
 			}
 		}
 	}
