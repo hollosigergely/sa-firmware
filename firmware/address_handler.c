@@ -42,37 +42,17 @@ uint16_t addr_handler_get_virtual_addr() {
 	}
 }
 
-bool isAnchor(uint16_t address)
+bool addr_handler_is_anchor()
 {
-	switch(address)
+	uint16_t addr = addr_handler_get();
+	switch(addr)
 	{
-		case 0xDEAD:
-			return true;
-		case 0xB0D1:
-			return true;
-		case 0xF00D:
-			return true;
-		case 0xFACE:
-			return true;
-		case 0xC001:
-			return true;
-		case 0xB0B1:
-			return true;
-		case 0xC0DE:
-			return true;
-		case 0xCAFE:
-			return true;
-
-		case 0xB0C1:
-			return false;
-		case 0xBABA:
-			return false;
-		case 0xBEEF:
-			return false;
-		case 0xFEED:
-			return false;
-	default:
-			return false;
+	case 0xC0DE:
+		return false;
+	case 0xC001:
+		return true;
+	case 0xBEEF:
+		return true;
 	}
 }
 

@@ -50,6 +50,7 @@ set(SRCS
       ${PROJECT_SOURCE_DIR}/dwm_utils.c
       ${PROJECT_SOURCE_DIR}/impl_observer.c
       ${PROJECT_SOURCE_DIR}/impl_anchor.c
+      ${PROJECT_SOURCE_DIR}/impl_tag.c
       ${PROJECT_SOURCE_DIR}/decadriver/deca_device.c
       ${PROJECT_SOURCE_DIR}/decadriver/deca_params_init.c
       ${PROJECT_SOURCE_DIR}/utils.c

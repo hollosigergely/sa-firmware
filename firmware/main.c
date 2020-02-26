@@ -25,6 +25,7 @@
 #include "address_handler.h"
 #include "impl_observer.h"
 #include "impl_anchor.h"
+#include "impl_tag.h"
 
 #define TAG "main"
 //  debugging with gdb: ./JLinkGDBServer -if SWD -device nRF51822
@@ -46,8 +47,16 @@ int main(void)
 
 	utils_init();
 
-	impl_anchor_init();
-	impl_anchor_loop();
+	if(!addr_handler_is_anchor())
+	{
+		impl_tag_init();
+		impl_tag_loop();
+	}
+	else
+	{
+		impl_anchor_init();
+		impl_anchor_loop();
+	}
 	//impl_observer_init();
 	//impl_observer_loop();
 }

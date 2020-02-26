@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 		myread(fd, &rxts, sizeof(uint64_t));
 		myread(fd, buffer, length - 2);
 
-		printf("%d %"PRIx64" %02.6f %02.6f ",
+		printf("%04d %"PRIx64" %02.6f %02.6f ",
 			   length - 2,
 			   rxts,
 			   (double)rxts / (499.2e6 * 128),
@@ -79,6 +79,11 @@ int main(int argc, char** argv)
 		{
 			sf_anchor_msg_t* msg = (sf_anchor_msg_t*)buffer;
 			printf("     # AM, src: %04X, trid: %d, txts: %"PRIu64, msg->hdr.src_id, msg->tr_id, pu8_to_u64(msg->tx_ts));
+		}
+		else if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE)
+		{
+			sf_tag_msg_t* msg = (sf_tag_msg_t*)buffer;
+			printf("     # TM, src: %04X", msg->hdr.src_id);
 		}
 
 		printf("\n");

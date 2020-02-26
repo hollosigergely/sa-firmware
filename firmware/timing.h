@@ -11,7 +11,7 @@
 #define TIMING_ANCHOR_MESSAGE_LENGTH_US                       5000
 #define TIMING_MESSAGE_TX_PREFIX_TIME_US                      (1051 + 400)          // RMARKER delay + DW1000 comm delay
 
-#define TIMING_TAG_MESSAGE_LENGTH_US           5000
+#define TIMING_TAG_MESSAGE_LENGTH_US                          5000
 
 #define TIMING_SUPERFRAME_LENGTH_US     (TIMING_ANCHOR_COUNT * TIMING_ANCHOR_MESSAGE_LENGTH_US + TIMING_TAG_COUNT * TIMING_TAG_MESSAGE_LENGTH_US)
 #define TIMING_SUPERFRAME_LENGTH_MS     (TIMING_SUPERFRAME_LENGTH_US/1000)
@@ -32,6 +32,10 @@ typedef struct {
     uint8_t         tr_id;
     uint8_t         tx_ts[5];
 } __attribute__((packed)) sf_anchor_msg_t;
+
+typedef struct {
+    sf_header_t     hdr;
+} __attribute__((packed)) sf_tag_msg_t;
 
 #define SF_MAX_MESSAGE_SIZE    (sizeof(sf_anchor_msg_t))
 
