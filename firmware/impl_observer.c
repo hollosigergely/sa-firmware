@@ -7,39 +7,13 @@
 #include "nrf_drv_gpiote.h"
 #include "nrf_gpiote.h"
 
-#include "nrf_uart.h"
-#include "nrf_uarte.h"
-#include "nrf_drv_uart.h"
-#include "app_uart.h"
+#include "uart.h"
 #include "app_error.h"
 
 #define TAG "obs"
 
-#define UART_TX_BUF_SIZE 256
-#define UART_RX_BUF_SIZE 256
-
 #define DW1000_RX_BUFFER_SIZE	512
 static uint8_t	m_rx_buffer[DW1000_RX_BUFFER_SIZE];
-
-
-static const char* hex_mapping = "0123456789ABCDEF";
-static void uart_put_as_hex(uint8_t* x, int length)
-{
-	for(int i = 0; i < length; i++)
-	{
-		uint8_t byte = x[i];
-		app_uart_put(hex_mapping[(byte >> 4) & 0x0F]);
-		app_uart_put(hex_mapping[(byte >> 0) & 0x0F]);
-	}
-}
-
-static void uart_put(uint8_t* x, int length)
-{
-	for(int i = 0; i < length; i++)
-	{
-		app_uart_put(x[i]);
-	}
-}
 
 static void mac_rxok_callback_impl(const dwt_cb_data_t *data)
 {
@@ -95,40 +69,6 @@ static void gpiote_init()
 }
 
 
-static void uart_error_handle(app_uart_evt_t * p_event)
-{
-	if (p_event->evt_type == APP_UART_COMMUNICATION_ERROR)
-	{
-		APP_ERROR_HANDLER(p_event->data.error_communication);
-	}
-	else if (p_event->evt_type == APP_UART_FIFO_ERROR)
-	{
-		APP_ERROR_HANDLER(p_event->data.error_code);
-	}
-}
-
-static void uart_init() {
-	const app_uart_comm_params_t comm_params =
-	   {
-		   11,
-		   5,
-		   0,
-		   0,
-		   APP_UART_FLOW_CONTROL_DISABLED,
-		   false,
-		   NRF_UART_BAUDRATE_1000000  //900000 baudrate
-	   };
-
-	uint32_t err_code;
-	UNUSED_VARIABLE(err_code);
-
-	APP_UART_FIFO_INIT(&comm_params,
-						 UART_RX_BUF_SIZE,
-						 UART_TX_BUF_SIZE,
-						 uart_error_handle,
-						 APP_IRQ_PRIORITY_LOWEST,
-						 err_code);
-}
 
 void impl_observer_init()
 {

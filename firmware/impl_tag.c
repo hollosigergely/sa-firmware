@@ -12,8 +12,11 @@
 
 #include "nrf_drv_timer.h"
 #include "timing.h"
+#include "uart.h"
 
 #define TAG "tag"
+
+
 
 #define SYNC_COMPENSATION_CONST_US	150
 
@@ -135,6 +138,29 @@ static void compensate_frame_timer(uint32_t c)
 	nrf_drv_timer_resume(&m_frame_timer);
 }
 
+static void log_anchor_message(sf_anchor_msg_t* msg, uint64_t rx_ts)
+{
+	char s[40];
+	sprintf(s, "1 %d %02x%02x%02x%02x%02x\n", msg->tr_id, msg->tx_ts[4], msg->tx_ts[3], msg->tx_ts[2], msg->tx_ts[1], msg->tx_ts[0]);
+	uart_puts(s);
+	sprintf(s, "2 %d %"PRIx64"\n", msg->tr_id, rx_ts);
+	uart_puts(s);
+
+	for(int i = 0; i < TIMING_TAG_COUNT; i++)
+	{
+		sprintf(s, "4 %d %02x%02x%02x%02x%02x\n", msg->tr_id, msg->tags[i].rx_ts[4], msg->tags[i].rx_ts[3], msg->tags[i].rx_ts[2], msg->tags[i].rx_ts[1], msg->tags[i].rx_ts[0]);
+		uart_puts(s);
+	}
+}
+
+static void log_tag_message(sf_tag_msg_t* msg, uint64_t tx_ts)
+{
+	char s[40];
+	sprintf(s, "3 %d %"PRIx64"\n", m_superframe_id, tx_ts);
+
+	uart_puts(s);
+}
+
 static void transmit_tag_msg() {
 	sf_tag_msg_t	msg;
 	msg.hdr.src_id = m_tag_id;
@@ -154,7 +180,11 @@ static void transmit_tag_msg() {
 	{
 		LOGE(TAG, "err: starttx\n");
 	}
+
+	log_tag_message(&msg, tx_ts);
 }
+
+
 
 static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t datalength)
 {
@@ -196,7 +226,8 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 			sf_header_t* hdr = (sf_header_t*)data;
 			if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
 			{
-				uint32_t slot_time_us = get_slot_time_by_message(dwm1000_get_rx_timestamp_u64());
+				uint64_t rx_ts = dwm1000_get_rx_timestamp_u64();
+				uint32_t slot_time_us = get_slot_time_by_message(rx_ts);
 				uint32_t sf_time_us = hdr->src_id * TIMING_ANCHOR_MESSAGE_LENGTH_US + slot_time_us;
 
 				compensate_frame_timer(sf_time_us);
@@ -207,6 +238,8 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 				m_superframe_id = msg->tr_id;
 
 				set_frame_timer(TIMING_ANCHOR_COUNT * TIMING_ANCHOR_MESSAGE_LENGTH_US + m_tag_id * TIMING_TAG_MESSAGE_LENGTH_US);
+
+				log_anchor_message(msg,rx_ts);
 			}
 		}
 		else if(event_type == EVENT_TIMER)
@@ -223,6 +256,11 @@ static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_cont
 	else if(event_type == NRF_TIMER_EVENT_COMPARE1)
 		event_handler(EVENT_SF_BEGIN, NULL, 0);
 }
+
+
+
+
+
 
 int impl_tag_init()
 {
@@ -247,6 +285,7 @@ int impl_tag_init()
 	NRF_CLOCK->TASKS_HFCLKSTART = 1;
 
 	gpiote_init();
+	uart_init();
 
 	LOGI(TAG,"initialize dw1000 phy\n");
 	dwm1000_phy_init();

@@ -28,9 +28,15 @@ typedef struct
 } __attribute__((packed)) sf_header_t;
 
 typedef struct {
+    uint8_t          rx_ts[5];
+} __attribute__((packed)) tag_rx_info_t;
+
+typedef struct {
     sf_header_t     hdr;
     uint8_t         tr_id;
     uint8_t         tx_ts[5];
+
+    tag_rx_info_t   tags[TIMING_TAG_COUNT];
 } __attribute__((packed)) sf_anchor_msg_t;
 
 typedef struct {
