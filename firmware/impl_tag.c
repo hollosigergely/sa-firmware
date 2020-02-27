@@ -148,8 +148,11 @@ static void log_anchor_message(sf_anchor_msg_t* msg, uint64_t rx_ts)
 
 	for(int i = 0; i < TIMING_TAG_COUNT; i++)
 	{
-		sprintf(s, "4 %d %02x%02x%02x%02x%02x\n", msg->tr_id, msg->tags[i].rx_ts[4], msg->tags[i].rx_ts[3], msg->tags[i].rx_ts[2], msg->tags[i].rx_ts[1], msg->tags[i].rx_ts[0]);
-		uart_puts(s);
+		if(msg->tags[i].rx_ts[4] | msg->tags[i].rx_ts[3] | msg->tags[i].rx_ts[2] | msg->tags[i].rx_ts[1] | msg->tags[i].rx_ts[0] != 0)
+		{
+			sprintf(s, "4 %d %d %02x%02x%02x%02x%02x\n", i, msg->tr_id, msg->tags[i].rx_ts[4], msg->tags[i].rx_ts[3], msg->tags[i].rx_ts[2], msg->tags[i].rx_ts[1], msg->tags[i].rx_ts[0]);
+			uart_puts(s);
+		}
 	}
 }
 

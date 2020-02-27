@@ -47,18 +47,23 @@ int main(void)
 
 	utils_init();
 
-	if(!addr_handler_is_anchor())
-	{
-		impl_tag_init();
-		impl_tag_loop();
+
+	if(false) {
+		impl_observer_init();
+		impl_observer_loop();
 	}
-	else
-	{
-		impl_anchor_init();
-		impl_anchor_loop();
+	else {
+		if(!addr_handler_is_anchor())
+		{
+			impl_tag_init();
+			impl_tag_loop();
+		}
+		else
+		{
+			impl_anchor_init();
+			impl_anchor_loop();
+		}
 	}
-	//impl_observer_init();
-	//impl_observer_loop();
 }
 
 

@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <byteswap.h>
+#include <chrono>
+using namespace std;
 
 #include "../firmware/timing.h"
 
@@ -12,10 +14,11 @@ static char buffer[65536];
 
 void myread (int __fd, void *__buf, size_t __nbytes)
 {
+	uint8_t* buf = (uint8_t*)__buf;
 	do {
-		int ret = read(__fd, __buf, __nbytes);
+		int ret = read(__fd, buf, __nbytes);
 		__nbytes -= ret;
-		__buf += ret;
+		buf += ret;
 	} while(__nbytes != 0);
 }
 
@@ -44,7 +47,9 @@ int main(int argc, char** argv)
 
 	int fd = open(path, O_RDONLY);
 
-	uint64_t last_rxts = 0;
+	auto start_ts = chrono::system_clock::now();
+
+	uint32_t last_rxts = 0;
 	for(;;) {
 		do {
 			read(fd, buffer, 1);
@@ -63,11 +68,15 @@ int main(int argc, char** argv)
 		myread(fd, &rxts, sizeof(uint64_t));
 		myread(fd, buffer, length - 2);
 
-		printf("%04d %"PRIx64" %02.6f %02.6f ",
+		uint32_t rxts_32 = rxts >> 8;
+
+		auto ts = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start_ts);
+		printf("%ld %04d %" PRIx64 " %02.6f %02.6f ",
+			   ts.count(),
 			   length - 2,
 			   rxts,
 			   (double)rxts / (499.2e6 * 128),
-			   (double)(rxts - last_rxts) / (499.2e6 * 128));
+			   (double)(rxts_32 - last_rxts) / (499.2e6 / 2));
 		for(int i = 0; i < length - 2; i++)
 		{
 			printf("%02X", buffer[i] & 0xFF);
@@ -78,7 +87,7 @@ int main(int argc, char** argv)
 		if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
 		{
 			sf_anchor_msg_t* msg = (sf_anchor_msg_t*)buffer;
-			printf("     # AM, src: %04X, trid: %d, txts: %"PRIu64, msg->hdr.src_id, msg->tr_id, pu8_to_u64(msg->tx_ts));
+			printf("     # AM, src: %04X, trid: %d, txts: %" PRIu64, msg->hdr.src_id, msg->tr_id, pu8_to_u64(msg->tx_ts));
 		}
 		else if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE)
 		{
@@ -88,7 +97,7 @@ int main(int argc, char** argv)
 
 		printf("\n");
 
-		last_rxts = rxts;
+		last_rxts = rxts >> 8;
 	}
 
 	return 0;
