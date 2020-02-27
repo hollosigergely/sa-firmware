@@ -15,19 +15,19 @@ uint16_t addr_handler_get()
 	switch(deviceID)
 	{
 		case 4529750270100757500U:
-			return 0xBEEF;
+			return 0xA001;
 		case 6048785804469331297U:
-			return 0xC001;
+			return 0xA003;
 		case 13508677794463904490U:
-			return 0xC0DE;
+			return 0xA000;
 		case 3863683410104583303U:
-			return 0xCAFE;
+			return 0x1000;
 		case 14500113281835358815U:
-			return 0xB0B1;
+			return 0xA002;
 		case 5795675720523340107U:
-			return 0x8000;
+			return 0xA005;
 		case 10210119633631049802U:
-			return 0xBABA;
+			return 0xA004;
 		default:
 			return 0xFFFF;
 	}
@@ -38,20 +38,20 @@ uint16_t addr_handler_get_virtual_addr() {
 
 	switch(addr)
 	{
-	case 0xC0DE:
+	case 0xA000:
 		return 0;
-	case 0xC001:
+	case 0xA001:
 		return 1;
-	case 0xBEEF:
+	case 0xA002:
 		return 2;
-	case 0x8000:
+	case 0xA003:
 		return 3;
-	case 0xBABA:
+	case 0xA004:
 		return 4;
-	case 0xCAFE:
+	case 0xA005:
+		return 5;
+	case 0x1000:
 		return 0;
-	case 0xB0B1:
-		return 1;
 	case 0xFFFF:
 	default:
 		return 0xFFFF;
@@ -63,19 +63,19 @@ bool addr_handler_is_anchor()
 	uint16_t addr = addr_handler_get();
 	switch(addr)
 	{
-	case 0xC0DE:
+	case 0xA000:
 		return true;
-	case 0xC001:
+	case 0xA001:
 		return true;
-	case 0xBEEF:
+	case 0xA002:
 		return true;
-	case 0x8000:
+	case 0xA003:
 		return true;
-	case 0xBABA:
+	case 0xA004:
 		return true;
-	case 0xCAFE:
-		return false;
-	case 0xB0B1:
+	case 0xA005:
+		return true;
+	case 0x1000:
 		return false;
 	}
 }

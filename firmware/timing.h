@@ -5,8 +5,8 @@
 
 #define TIMING_DISCOVERY_SUPERFRAME_COUNT   5
 
-#define TIMING_ANCHOR_COUNT             6
-#define TIMING_TAG_COUNT                2
+#define TIMING_ANCHOR_COUNT             7
+#define TIMING_TAG_COUNT                1
 
 #define TIMING_ANCHOR_MESSAGE_LENGTH_US                       5000
 #define TIMING_MESSAGE_TX_PREFIX_TIME_US                      (1051 + 400)          // RMARKER delay + DW1000 comm delay
