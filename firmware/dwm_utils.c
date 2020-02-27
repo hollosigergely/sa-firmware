@@ -18,7 +18,7 @@ static dwt_config_t dwt_config = {
 		4,               // Channel number.
 		DWT_PRF_64M,     // Pulse repetition frequency.
 		DWT_PLEN_1024,    // Preamble length.
-		DWT_PAC64,        // Preamble acquisition chunk size. Used in RX only.
+		DWT_PAC32,        // Preamble acquisition chunk size. Used in RX only.
 		18,               // TX preamble code. Used in TX only.
 		18,               // RX preamble code. Used in RX only.
 		1,               // Use non-standard SFD (Boolean)

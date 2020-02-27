@@ -38,6 +38,8 @@ static tag_state_t				m_tag_state = TAG_STATE__DISCOVERY;
 static uint16_t					m_tag_id = 0;
 static uint8_t					m_superframe_id = 0;
 static uint8_t					m_rx_buffer[SF_MAX_MESSAGE_SIZE];
+static uint8_t					m_received_sync_messages_count = 0;
+static uint8_t					m_unsynced_sf_count = 0;
 
 static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context);
 static void restart_frame_timer();
@@ -52,9 +54,10 @@ static void set_tag_state(tag_state_t newstate)
 
 inline static uint32_t get_slot_time_by_message(uint64_t rx_ts)
 {
-	uint64_t systime = dwm1000_get_system_time_u64();
+	uint32_t rx_ts_32 = rx_ts >> 8;
+	uint32_t systime_32 = dwm1000_get_system_time_u64() >> 8;
 
-	return (systime-rx_ts)/UUS_TO_DWT_TIME + TIMING_MESSAGE_TX_PREFIX_TIME_US;
+	return (systime_32-rx_ts_32)/(UUS_TO_DWT_TIME/256) + TIMING_MESSAGE_TX_PREFIX_TIME_US;
 }
 
 static void mac_rxok_callback_impl(const dwt_cb_data_t *data)
@@ -141,16 +144,25 @@ static void compensate_frame_timer(uint32_t c)
 static void log_anchor_message(sf_anchor_msg_t* msg, uint64_t rx_ts)
 {
 	char s[40];
-	sprintf(s, "1 %d %02x%02x%02x%02x%02x\n", msg->tr_id, msg->tx_ts[4], msg->tx_ts[3], msg->tx_ts[2], msg->tx_ts[1], msg->tx_ts[0]);
+	sprintf(s, "1 %d %d %02x%02x%02x%02x%02x\n", msg->hdr.src_id, msg->tr_id, msg->tx_ts[4], msg->tx_ts[3], msg->tx_ts[2], msg->tx_ts[1], msg->tx_ts[0]);
 	uart_puts(s);
-	sprintf(s, "2 %d %"PRIx64"\n", msg->tr_id, rx_ts);
+	sprintf(s, "2 %d %d %"PRIx64"\n", msg->hdr.src_id, msg->tr_id, rx_ts);
 	uart_puts(s);
 
 	for(int i = 0; i < TIMING_TAG_COUNT; i++)
 	{
-		if(msg->tags[i].rx_ts[4] | msg->tags[i].rx_ts[3] | msg->tags[i].rx_ts[2] | msg->tags[i].rx_ts[1] | msg->tags[i].rx_ts[0] != 0)
+		if((msg->tags[i].rx_ts[4] | msg->tags[i].rx_ts[3] | msg->tags[i].rx_ts[2] | msg->tags[i].rx_ts[1] | msg->tags[i].rx_ts[0]) != 0)
 		{
-			sprintf(s, "4 %d %d %02x%02x%02x%02x%02x\n", i, msg->tr_id, msg->tags[i].rx_ts[4], msg->tags[i].rx_ts[3], msg->tags[i].rx_ts[2], msg->tags[i].rx_ts[1], msg->tags[i].rx_ts[0]);
+			sprintf(s, "4 %d %d %d %02x%02x%02x%02x%02x\n", msg->hdr.src_id,i, msg->tr_id, msg->tags[i].rx_ts[4], msg->tags[i].rx_ts[3], msg->tags[i].rx_ts[2], msg->tags[i].rx_ts[1], msg->tags[i].rx_ts[0]);
+			uart_puts(s);
+		}
+	}
+
+	for(int i = 0; i < TIMING_ANCHOR_COUNT; i++)
+	{
+		if((msg->anchors[i].rx_ts[4] | msg->anchors[i].rx_ts[3] | msg->anchors[i].rx_ts[2] | msg->anchors[i].rx_ts[1] | msg->anchors[i].rx_ts[0]) != 0)
+		{
+			sprintf(s, "5 %d %d %d %02x%02x%02x%02x%02x\n", msg->hdr.src_id, i, msg->tr_id, msg->anchors[i].rx_ts[4], msg->anchors[i].rx_ts[3], msg->anchors[i].rx_ts[2], msg->anchors[i].rx_ts[1], msg->anchors[i].rx_ts[0]);
 			uart_puts(s);
 		}
 	}
@@ -197,6 +209,8 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 	{
 		restart_frame_timer();
 		LOGT(TAG, "SF\n");
+
+		m_received_sync_messages_count = 0;
 	}
 
 	if(m_tag_state == TAG_STATE__DISCOVERY)
@@ -242,12 +256,30 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 
 				set_frame_timer(TIMING_ANCHOR_COUNT * TIMING_ANCHOR_MESSAGE_LENGTH_US + m_tag_id * TIMING_TAG_MESSAGE_LENGTH_US);
 
+				m_received_sync_messages_count++;
+				m_unsynced_sf_count = 0;
 				log_anchor_message(msg,rx_ts);
 			}
 		}
 		else if(event_type == EVENT_TIMER)
 		{
+			if(m_received_sync_messages_count == 0)
+			{
+				m_unsynced_sf_count++;
+				LOGE(TAG, "sync lost\n");
+
+				if(m_unsynced_sf_count > 5)
+				{
+					set_tag_state(TAG_STATE__DISCOVERY);
+
+
+					return;
+				}
+			}
+
+
 			transmit_tag_msg();
+
 		}
 	}
 }

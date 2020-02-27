@@ -5,8 +5,8 @@
 
 #define TIMING_DISCOVERY_SUPERFRAME_COUNT   5
 
-#define TIMING_ANCHOR_COUNT             5
-#define TIMING_TAG_COUNT                10
+#define TIMING_ANCHOR_COUNT             6
+#define TIMING_TAG_COUNT                2
 
 #define TIMING_ANCHOR_MESSAGE_LENGTH_US                       5000
 #define TIMING_MESSAGE_TX_PREFIX_TIME_US                      (1051 + 400)          // RMARKER delay + DW1000 comm delay
@@ -29,14 +29,15 @@ typedef struct
 
 typedef struct {
     uint8_t          rx_ts[5];
-} __attribute__((packed)) tag_rx_info_t;
+} __attribute__((packed)) rx_info_t;
 
 typedef struct {
     sf_header_t     hdr;
     uint8_t         tr_id;
     uint8_t         tx_ts[5];
 
-    tag_rx_info_t   tags[TIMING_TAG_COUNT];
+    rx_info_t       anchors[TIMING_ANCHOR_COUNT];
+    rx_info_t       tags[TIMING_TAG_COUNT];
 } __attribute__((packed)) sf_anchor_msg_t;
 
 typedef struct {

@@ -40,7 +40,8 @@ static uint16_t					m_anchor_id = 1;
 static uint16_t					m_anchor_addr = 0;
 static uint8_t					m_superframe_id = 0;
 static uint8_t					m_rx_buffer[SF_MAX_MESSAGE_SIZE];
-static tag_rx_info_t			m_tag_infos[TIMING_TAG_COUNT];
+static rx_info_t				m_tag_infos[TIMING_TAG_COUNT];
+static rx_info_t				m_anchor_infos[TIMING_ANCHOR_COUNT];
 
 static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context);
 static void restart_frame_timer();
@@ -55,9 +56,10 @@ static void set_anchor_state(anchor_state_t newstate)
 
 inline static uint32_t get_slot_time_by_message(uint64_t rx_ts)
 {
-	uint64_t systime = dwm1000_get_system_time_u64();
+	uint32_t rx_ts_32 = rx_ts >> 8;
+	uint32_t systime_32 = dwm1000_get_system_time_u64() >> 8;
 
-	return (systime-rx_ts)/UUS_TO_DWT_TIME + TIMING_MESSAGE_TX_PREFIX_TIME_US;
+	return (systime_32-rx_ts_32)/(UUS_TO_DWT_TIME/256) + TIMING_MESSAGE_TX_PREFIX_TIME_US;
 }
 
 static void mac_rxok_callback_impl(const dwt_cb_data_t *data)
@@ -146,7 +148,8 @@ static void transmit_anchor_msg() {
 	msg.hdr.src_id = m_anchor_id;
 	msg.hdr.fctrl = SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE;
 	msg.tr_id = m_superframe_id;
-	memcpy(msg.tags, m_tag_infos, TIMING_TAG_COUNT * sizeof(tag_rx_info_t));
+	memcpy(msg.tags, m_tag_infos, TIMING_TAG_COUNT * sizeof(rx_info_t));
+	memcpy(msg.anchors, m_anchor_infos, TIMING_ANCHOR_COUNT * sizeof(rx_info_t));
 
 	uint64_t sys_ts = dwm1000_get_system_time_u64();
 	uint32_t tx_ts_32 = (sys_ts + (TIMING_MESSAGE_TX_PREFIX_TIME_US * UUS_TO_DWT_TIME)) >> 8;
@@ -162,6 +165,8 @@ static void transmit_anchor_msg() {
 	{
 		LOGE(TAG, "err: starttx\n");
 	}
+
+	memset(m_anchor_infos,0,TIMING_ANCHOR_COUNT * sizeof(rx_info_t));
 }
 
 static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t datalength)
@@ -236,7 +241,7 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 			{
 				sf_tag_msg_t* msg = (sf_tag_msg_t*)data;
 				dwt_readrxtimestamp(m_tag_infos[msg->hdr.src_id].rx_ts);
-				LOGI(TAG,"saved\n");
+				LOGI(TAG,"t save\n");
 			}
 		}
 	}
@@ -260,6 +265,9 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 
 				compensate_frame_timer(sf_time_us + SYNC_COMPENSATION_CONST_US);
 				LOGT(TAG,"SFT %ld\n", sf_time_us);
+
+				dwt_readrxtimestamp(m_anchor_infos[hdr->src_id].rx_ts);
+				LOGI(TAG,"a save 1\n");
 			}
 		}
 	}
@@ -267,12 +275,24 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 	{
 		set_frame_timer(TIMING_ANCHOR_COUNT * TIMING_ANCHOR_MESSAGE_LENGTH_US);
 		set_anchor_state(ANCHOR_STATE__AFTER_ANCHOR_MSG);
-		memset(m_tag_infos,0,TIMING_TAG_COUNT * sizeof(tag_rx_info_t));
+		memset(m_tag_infos,0,TIMING_TAG_COUNT * sizeof(rx_info_t));
 		//dwt_rxenable(0);
 	}
 	else if(m_anchor_state == ANCHOR_STATE__AFTER_ANCHOR_MSG)
 	{
-		set_anchor_state(ANCHOR_STATE__TAG_FRAME);
+		if(event_type == EVENT_TIMER)
+		{
+			set_anchor_state(ANCHOR_STATE__TAG_FRAME);
+		}
+		else if(event_type == EVENT_RX)
+		{
+			sf_header_t* hdr = (sf_header_t*)data;
+			if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
+			{
+				dwt_readrxtimestamp(m_anchor_infos[hdr->src_id].rx_ts);
+				LOGI(TAG,"a save 2\n");
+			}
+		}
 		//dwt_rxenable(0);
 	}
 }

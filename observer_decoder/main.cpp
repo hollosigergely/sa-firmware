@@ -34,6 +34,17 @@ uint64_t pu8_to_u64(uint8_t* ts_tab)
 	return ts;
 }
 
+int count_not_zero(rx_info_t* info, int size)
+{
+	int count = 0;
+	for(int i = 0; i < size; i++)
+	{
+		if((info[i].rx_ts[0] | info[i].rx_ts[1] | info[i].rx_ts[2] | info[i].rx_ts[3] | info[i].rx_ts[4]) != 0)
+			count++;
+	}
+	return count;
+}
+
 int main(int argc, char** argv)
 {
 	if(argc != 2)
@@ -71,7 +82,7 @@ int main(int argc, char** argv)
 		uint32_t rxts_32 = rxts >> 8;
 
 		auto ts = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start_ts);
-		printf("%ld %04d %" PRIx64 " %02.6f %02.6f ",
+		printf("%10ld %4d %10" PRIx64 " %9.6f %02.6f ",
 			   ts.count(),
 			   length - 2,
 			   rxts,
@@ -87,7 +98,8 @@ int main(int argc, char** argv)
 		if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
 		{
 			sf_anchor_msg_t* msg = (sf_anchor_msg_t*)buffer;
-			printf("     # AM, src: %04X, trid: %d, txts: %" PRIu64, msg->hdr.src_id, msg->tr_id, pu8_to_u64(msg->tx_ts));
+			printf("     # AM, src: %04X, trid: %d, txts: %" PRIu64 ", tags: %d, anchors: %d", msg->hdr.src_id, msg->tr_id, pu8_to_u64(msg->tx_ts),
+				   count_not_zero(msg->tags, TIMING_TAG_COUNT), count_not_zero(msg->anchors, TIMING_ANCHOR_COUNT));
 		}
 		else if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE)
 		{
