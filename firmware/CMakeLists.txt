@@ -96,6 +96,8 @@ include_directories(
     ${NRF5_SDK_ROOT}/components
     ${NRF5_SDK_ROOT}/modules/nrfx/mdk
     ${NRF5_SDK_ROOT}/components/libraries/experimental_log
+    ${NRF5_SDK_ROOT}/components/libraries/log
+    ${NRF5_SDK_ROOT}/components/libraries/log/src
     ${PROJECT_SOURCE_DIR}
     ${PROJECT_SOURCE_DIR}/ld.script
     ${PROJECT_SOURCE_DIR}/decadriver
@@ -137,5 +139,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${PROJECT_NAME}> ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.hex)
 
 add_custom_target(flash
-    COMMAND ${NRFJPROG_ROOT}/nrfjprog -f nrf52 --program ${PROJECT_NAME}.hex --sectorerase
+    COMMAND nrfjprog -f nrf52 --program ${PROJECT_NAME}.hex --sectorerase
     DEPENDS ${PROJECT_NAME})
+
+add_custom_target(gdbs
+   COMMENT "Use 'netcat localhost 19021'"
+   COMMAND JLinkGDBServer -if SWD -device nRF52)
