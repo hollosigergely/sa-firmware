@@ -323,7 +323,7 @@ int impl_tag_init()
     //NRF_CLOCK->TASKS_HFCLKSTART = 1;
 
 	gpiote_init();
-	uart_init();
+    uart_init();
 
 	LOGI(TAG,"initialize dw1000 phy\n");
 	dwm1000_phy_init();

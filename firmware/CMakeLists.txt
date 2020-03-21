@@ -78,7 +78,8 @@ set(SRCS
       ${NRF5_SDK_ROOT}/components/libraries/util/app_error_weak.c
       ${NRF5_SDK_ROOT}/components/libraries/scheduler/app_scheduler.c
       ${NRF5_SDK_ROOT}/components/libraries/timer/app_timer2.c
-      ${NRF5_SDK_ROOT}/components/libraries/uart/app_uart.c
+      ${NRF5_SDK_ROOT}/components/libraries/uart/app_uart_fifo.c
+      ${NRF5_SDK_ROOT}/components/libraries/fifo/app_fifo.c
       ${NRF5_SDK_ROOT}/components/libraries/util/app_util_platform.c
       ${NRF5_SDK_ROOT}/components/libraries/timer/drv_rtc.c
       ${NRF5_SDK_ROOT}/components/libraries/hardfault/hardfault_implementation.c

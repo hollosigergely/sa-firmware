@@ -38,7 +38,7 @@ void my_error_function(int code, const char *filename, const int line)
 {
     __disable_irq();
 
-    NRF_LOG_ERROR("Fatal error");
+    NRF_LOG_ERROR("FE: %d (%s:%d)", code, filename, line);
     NRF_LOG_FINAL_FLUSH();
 
     for(;;) {}

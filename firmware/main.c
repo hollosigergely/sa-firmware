@@ -31,6 +31,7 @@
 #include "nrf_pwr_mgmt.h"
 #include "nrf_sdh.h"
 #include "ble_func.h"
+#include "uart.h"
 
 #include "address_handler.h"
 #include "impl_observer.h"
@@ -79,7 +80,6 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
     {
         case LEDBUTTON_BUTTON:
             NRF_LOG_INFO("Send button state change");
-
             /*err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, button_action);
             if (err_code != NRF_SUCCESS &&
                 err_code != BLE_ERROR_INVALID_CONN_HANDLE &&
@@ -140,6 +140,10 @@ int main(void)
 	uint64_t chipID = addr_handler_get_chip_id();
 	LOGI(TAG,"Chip id: %llu\n", chipID);
 
+    char device_name[26];
+    addr_handler_get_device_name(device_name);
+    LOGI(TAG,"device name: %s\n", device_name);
+
     APP_SCHED_INIT(APP_TIMER_SCHED_EVENT_DATA_SIZE, 10);
 
     leds_init();
@@ -158,7 +162,7 @@ int main(void)
             ERROR_CHECK(err_code, NRF_SUCCESS);
 
             sd_clock_hfclk_request();
-            ble_func_init();
+            ble_func_init(device_name);
 
             impl_tag_init();
         }

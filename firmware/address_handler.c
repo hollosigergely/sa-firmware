@@ -1,5 +1,6 @@
 #include "address_handler.h"
 #include <nrf.h>
+#include <stdio.h>
 
 uint64_t addr_handler_get_chip_id() {
 	uint64_t deviceID = NRF_FICR->DEVICEID[1];
@@ -94,5 +95,17 @@ bool addr_handler_is_anchor()
     case 0x2000:
         return false;
 	}
+}
+
+void addr_handler_get_device_name(char* device_name)
+{
+    if(addr_handler_is_anchor())
+    {
+        sprintf(device_name, "Anchor 0x%04X", addr_handler_get());
+    }
+    else
+    {
+        sprintf(device_name, "Tag 0x%04X", addr_handler_get());
+    }
 }
 

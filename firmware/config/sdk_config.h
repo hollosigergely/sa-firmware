@@ -7437,6 +7437,10 @@
 // </h> 
 //==========================================================
 
+#ifndef APP_FIFO_ENABLED
+#define APP_FIFO_ENABLED 1
+#endif
+
 // <h> app_usbd_cdc_acm - USB CDC ACM class
 
 //==========================================================

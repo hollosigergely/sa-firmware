@@ -4,6 +4,7 @@
 #include "nrf_uarte.h"
 #include "nrf_drv_uart.h"
 #include "app_uart.h"
+#include "nrf_log.h"
 
 static const char* hex_mapping = "0123456789ABCDEF";
 void uart_put_as_hex(uint8_t* x, int length)
@@ -20,7 +21,7 @@ void uart_put(uint8_t* x, int length)
 {
 	for(int i = 0; i < length; i++)
 	{
-		app_uart_put(x[i]);
+        app_uart_put(x[i]);
 	}
 }
 
@@ -28,7 +29,7 @@ void uart_puts(char* s)
 {
 	while(*s)
 	{
-		app_uart_put(*s++);
+        app_uart_put(*s++);
 	}
 }
 
