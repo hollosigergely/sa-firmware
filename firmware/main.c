@@ -46,7 +46,8 @@
 //	(gdb) monitor reset/go/halt
 //	(gdb) monitor memU8 <memory_address>
 
-#define LEDBUTTON_BUTTON                BSP_BUTTON_0
+#define BUTTON_USER                     BSP_BUTTON_0
+#define BUTTON_USER_INDEX               0
 #define BUTTON_DETECTION_DELAY          APP_TIMER_TICKS(50)
 
 
@@ -78,7 +79,7 @@ static void button_event_handler(uint8_t pin_no, uint8_t button_action)
 
     switch (pin_no)
     {
-        case LEDBUTTON_BUTTON:
+        case BUTTON_USER:
             NRF_LOG_INFO("Send button state change");
             /*err_code = ble_lbs_on_button_change(m_conn_handle, &m_lbs, button_action);
             if (err_code != NRF_SUCCESS &&
@@ -100,7 +101,7 @@ static void buttons_init(void)
     //The array must be static because a pointer to it will be saved in the button handler module.
     static app_button_cfg_t buttons[] =
     {
-        {LEDBUTTON_BUTTON, false, BUTTON_PULL, button_event_handler}
+        {BUTTON_USER, false, BUTTON_PULL, button_event_handler}
     };
 
     err_code = app_button_init(buttons, ARRAY_SIZE(buttons),
@@ -151,7 +152,7 @@ int main(void)
     buttons_init();
     power_management_init();
 
-    if(false) {
+    if(app_button_is_pushed(BUTTON_USER_INDEX)) {
         impl_observer_init();
     }
     else {

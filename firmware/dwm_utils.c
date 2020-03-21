@@ -4,6 +4,7 @@
 #include "dwm_utils.h"
 #include "log.h"
 #include "decadriver/deca_param_types.h"
+#include "utils.h"
 
 #define TAG "dwm_utils"
 
@@ -316,6 +317,37 @@ int dwm1000_phy_init()
 	LOGI(TAG,"txpower: %08lX\n", txpower);
 
     return 0;
+}
+
+static void gpiote_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+    if(pin == DW1000_IRQ)
+    {
+        dwt_isr();
+    }
+}
+
+void dwm1000_irq_enable()
+{
+    ret_code_t err_code;
+
+    if (!nrf_drv_gpiote_is_init())
+    {
+        err_code = nrf_drv_gpiote_init();
+        ERROR_CHECK(err_code, NRF_SUCCESS);
+    }
+
+    nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);
+    in_config.pull = NRF_GPIO_PIN_PULLDOWN;
+    err_code = nrf_drv_gpiote_in_init(DW1000_IRQ, &in_config, gpiote_event_handler);
+    APP_ERROR_CHECK(err_code);
+
+    nrf_drv_gpiote_in_event_enable(DW1000_IRQ, true);
+}
+
+void dwm1000_irq_disable()
+{
+    nrf_drv_gpiote_in_event_disable(DW1000_IRQ);
 }
 
 void dwm1000_phy_release()

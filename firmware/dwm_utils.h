@@ -39,6 +39,9 @@ void dwm1000_timestamp_u64_to_pu8(uint64_t ts, uint8_t* out);
 int dwm1000_phy_init();
 void dwm1000_phy_release();
 
+void dwm1000_irq_enable();
+void dwm1000_irq_disable();
+
 #endif /* DW1000_H_ */
 
 

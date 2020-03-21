@@ -43,30 +43,6 @@ static void mac_rxerr_callback_impl(const dwt_cb_data_t *data)
 	dwt_rxenable(0);
 }
 
-static void gpiote_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
-{
-	if(pin == DW1000_IRQ)
-	{
-		LOGT(TAG,"DW1000 IRQ\n");
-
-		dwt_isr();
-	}
-}
-
-static void gpiote_init()
-{
-	ret_code_t err_code;
-
-	err_code = nrf_drv_gpiote_init();
-	APP_ERROR_CHECK(err_code);
-
-	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);
-	in_config.pull = NRF_GPIO_PIN_PULLDOWN;
-	err_code = nrf_drv_gpiote_in_init(DW1000_IRQ, &in_config, gpiote_event_handler);
-	APP_ERROR_CHECK(err_code);
-
-	nrf_drv_gpiote_in_event_enable(DW1000_IRQ, true);
-}
 
 
 
@@ -77,7 +53,7 @@ void impl_observer_init()
 	NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
 	NRF_CLOCK->TASKS_HFCLKSTART = 1;
 
-	gpiote_init();
+    dwm1000_irq_enable();
 	uart_init();
 
 	LOGI(TAG,"initialize dw1000 phy\n");

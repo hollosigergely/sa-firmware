@@ -47,16 +47,7 @@ int count_not_zero(rx_info_t* info, int size)
 
 int main(int argc, char** argv)
 {
-	if(argc != 2)
-	{
-		printf("Wrong argument list!\n");
-		exit(1);
-	}
-
-	const char* path = argv[1];
-	fprintf(stderr, "Using file: %s\n", path);
-
-	int fd = open(path, O_RDONLY);
+    int fd = STDIN_FILENO;
 
 	auto start_ts = chrono::system_clock::now();
 

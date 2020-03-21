@@ -61,7 +61,6 @@ set(SRCS
       ${PROJECT_SOURCE_DIR}/decadriver/deca_params_init.c
       ${PROJECT_SOURCE_DIR}/utils.c
       ${PROJECT_SOURCE_DIR}/timing.c
-      ${PROJECT_SOURCE_DIR}/messages.c
       ${PROJECT_SOURCE_DIR}/ble/ble_func.c
       ${PROJECT_SOURCE_DIR}/ble/ranging_service.c
 
