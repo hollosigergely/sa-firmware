@@ -100,8 +100,11 @@ static void gpiote_init()
 {
 	ret_code_t err_code;
 
-	err_code = nrf_drv_gpiote_init();
-	APP_ERROR_CHECK(err_code);
+    if (!nrf_drv_gpiote_is_init())
+    {
+        err_code = nrf_drv_gpiote_init();
+        ERROR_CHECK(err_code, NRF_SUCCESS);
+    }
 
 	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);
 	in_config.pull = NRF_GPIO_PIN_PULLDOWN;
@@ -316,8 +319,8 @@ int impl_tag_init()
 	LOGI(TAG,"addr: %04X\n", m_tag_id);
 	LOGI(TAG,"sf length: %d\n", TIMING_SUPERFRAME_LENGTH_MS);
 
-	NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
-	NRF_CLOCK->TASKS_HFCLKSTART = 1;
+    //NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
+    //NRF_CLOCK->TASKS_HFCLKSTART = 1;
 
 	gpiote_init();
 	uart_init();
@@ -347,19 +350,5 @@ int impl_tag_init()
 	return 0;
 }
 
-void impl_tag_loop()
-{
-	while(1)
-	{
-		//__WFI();
-		//__WFI();
-		/*dwt_forcetrxoff();
-		dwt_writetxdata(4, (uint8_t*)"AB", 0);
-		dwt_writetxfctrl(4, 0, 1);   // add CRC
-		dwt_starttx(DWT_START_TX_IMMEDIATE);*/
-
-		nrf_delay_ms(500);
-	}
-}
 
 

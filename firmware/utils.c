@@ -1,6 +1,9 @@
 #include "utils.h"
 #include "nrf_gpio.h"
 #include "nrf_drv_timer.h"
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
+#include "app_util.h"
 
 const static nrf_drv_timer_t m_execution_timer = NRF_DRV_TIMER_INSTANCE(4);
 
@@ -28,4 +31,15 @@ uint32_t utils_stop_execution_timer()
 {
 	uint32_t counter = nrf_drv_timer_capture(&m_execution_timer, NRF_TIMER_CC_CHANNEL0);
 	return counter >> 4;
+}
+
+__attribute__((weak))
+void my_error_function(int code, const char *filename, const int line)
+{
+    __disable_irq();
+
+    NRF_LOG_ERROR("Fatal error");
+    NRF_LOG_FINAL_FLUSH();
+
+    for(;;) {}
 }

@@ -28,6 +28,11 @@ uint16_t addr_handler_get()
 			return 0xA005;
 		case 10210119633631049802U:
 			return 0xA004;
+
+        case 822526009735700523U:
+            return 0xB001;
+        case 4233353996318710681U:
+            return 0x2000;
 		default:
 			return 0xFFFF;
 	}
@@ -52,6 +57,12 @@ uint16_t addr_handler_get_virtual_addr() {
 		return 5;
 	case 0x1000:
 		return 0;
+
+    case 0xB001:
+        return 0;
+    case 0x2000:
+        return 0;
+
 	case 0xFFFF:
 	default:
 		return 0xFFFF;
@@ -77,6 +88,11 @@ bool addr_handler_is_anchor()
 		return true;
 	case 0x1000:
 		return false;
+
+    case 0xB001:
+        return true;
+    case 0x2000:
+        return false;
 	}
 }
 
