@@ -17,6 +17,12 @@
       SEGGER_RTT_WriteString(0, _out); \
     }
 
+#define LOGW(tag,msg,...) { \
+      char _out[256]; \
+      sprintf(_out,"[W] " msg, ##__VA_ARGS__); \
+      SEGGER_RTT_WriteString(0, _out); \
+    }
+
 #define LOGI(tag,msg,...) { \
     char _out[256]; \
     sprintf(_out,"[I] " msg, ##__VA_ARGS__); \
@@ -24,6 +30,7 @@
   }
 #else
 #define LOGE(tag,msg,...)
+#define LOGW(tag,msg,...)
 #define LOGI(tag,msg,...)
 #endif
 

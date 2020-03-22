@@ -31,9 +31,9 @@ struct ble_rs_s
     uint8_t                     uuid_type;           /**< UUID type for the Ranging Service. */
 };
 
-uint32_t ble_rs_init(ble_rs_t * p_rs);
+uint32_t ble_rs_init(ble_rs_t * p_rs, uint16_t max_ranging_count);
 void ble_rs_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context);
-uint32_t ble_rs_send_notification(uint16_t conn_handle, ble_rs_t * p_rs, uint16_t counter);
+uint32_t ble_rs_send_ranging(uint16_t conn_handle, ble_rs_t * p_rs, uint16_t* ranging_data, uint16_t ranging_count);
 
 
 #endif // RANGING_SERVICE_H

@@ -31,10 +31,36 @@
 
 #define UUS_TO_DWT_TIME				63897
 
-uint64_t dwm1000_get_system_time_u64(void);
-uint64_t dwm1000_get_rx_timestamp_u64(void);
+typedef union {
+    uint64_t    ts;
+    uint8_t     ts_bytes[5];
 
-void dwm1000_timestamp_u64_to_pu8(uint64_t ts, uint8_t* out);
+    uint32_t    ts_low_32;
+} dwm1000_ts_t;
+
+dwm1000_ts_t dwm1000_get_system_time_u64(void);
+dwm1000_ts_t dwm1000_get_rx_timestamp_u64(void);
+inline void dwm1000_ts_to_pu8(dwm1000_ts_t ts, uint8_t* p8)
+{
+    for(int i = 0; i < 5; i++)
+        p8[i] = ts.ts_bytes[i];
+}
+
+inline dwm1000_ts_t dwm1000_pu8_to_ts(const uint8_t* p8)
+{
+    dwm1000_ts_t _ts = { 0 };
+    for(int i = 0; i < 5; i++)
+        _ts.ts_bytes[i] = p8[i];
+    return _ts;
+}
+
+inline void dwm1000_ts_u64_to_pu8(uint64_t ts, uint8_t* p8)
+{
+    dwm1000_ts_t _ts = { 0 };
+    _ts.ts = ts;
+
+    dwm1000_ts_to_pu8(_ts,p8);
+}
 
 int dwm1000_phy_init();
 void dwm1000_phy_release();

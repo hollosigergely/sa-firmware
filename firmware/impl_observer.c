@@ -24,11 +24,11 @@ static void mac_rxok_callback_impl(const dwt_cb_data_t *data)
 	}
 
 	dwt_readrxdata(m_rx_buffer, data->datalength - 2, 0);
-	uint64_t rxts = dwm1000_get_rx_timestamp_u64();
+    dwm1000_ts_t rxts = dwm1000_get_rx_timestamp_u64();
 
 	uart_put((uint8_t*)"x",1);
 	uart_put((uint8_t*)&data->datalength, sizeof(uint16_t));
-	uart_put((uint8_t*)&rxts, sizeof(uint64_t));
+    uart_put((uint8_t*)&rxts.ts, sizeof(uint64_t));
 	uart_put((uint8_t*)m_rx_buffer, data->datalength - 2);
 
 	dwt_rxenable(0);

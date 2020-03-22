@@ -54,10 +54,10 @@ static void set_anchor_state(anchor_state_t newstate)
 	m_anchor_state = newstate;
 }
 
-inline static uint32_t get_slot_time_by_message(uint64_t rx_ts)
+inline static uint32_t get_slot_time_by_message(dwm1000_ts_t rx_ts)
 {
-	uint32_t rx_ts_32 = rx_ts >> 8;
-	uint32_t systime_32 = dwm1000_get_system_time_u64() >> 8;
+    uint32_t rx_ts_32 = rx_ts.ts >> 8;
+    uint32_t systime_32 = dwm1000_get_system_time_u64().ts >> 8;
 
 	return (systime_32-rx_ts_32)/(UUS_TO_DWT_TIME/256) + TIMING_MESSAGE_TX_PREFIX_TIME_US;
 }
@@ -90,28 +90,6 @@ static void mac_txok_callback_impl(const dwt_cb_data_t* data)
 	dwt_rxenable(0);
 }
 
-static void gpiote_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
-{
-	if(pin == DW1000_IRQ)
-	{
-		dwt_isr();
-	}
-}
-
-static void gpiote_init()
-{
-	ret_code_t err_code;
-
-	err_code = nrf_drv_gpiote_init();
-	APP_ERROR_CHECK(err_code);
-
-	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);
-	in_config.pull = NRF_GPIO_PIN_PULLDOWN;
-	err_code = nrf_drv_gpiote_in_init(DW1000_IRQ, &in_config, gpiote_event_handler);
-	APP_ERROR_CHECK(err_code);
-
-	nrf_drv_gpiote_in_event_enable(DW1000_IRQ, true);
-}
 
 static void restart_frame_timer() {
 	m_frame_timer_compensation_us = 0;
@@ -151,11 +129,11 @@ static void transmit_anchor_msg() {
 	memcpy(msg.tags, m_tag_infos, TIMING_TAG_COUNT * sizeof(rx_info_t));
 	memcpy(msg.anchors, m_anchor_infos, TIMING_ANCHOR_COUNT * sizeof(rx_info_t));
 
-	uint64_t sys_ts = dwm1000_get_system_time_u64();
-	uint32_t tx_ts_32 = (sys_ts + (TIMING_MESSAGE_TX_PREFIX_TIME_US * UUS_TO_DWT_TIME)) >> 8;
+    dwm1000_ts_t sys_ts = dwm1000_get_system_time_u64();
+    uint32_t tx_ts_32 = (sys_ts.ts + (TIMING_MESSAGE_TX_PREFIX_TIME_US * UUS_TO_DWT_TIME)) >> 8;
 	uint64_t tx_ts = (((uint64_t)(tx_ts_32 & 0xFFFFFFFEUL)) << 8);
 
-	dwm1000_timestamp_u64_to_pu8(tx_ts, msg.tx_ts);
+    dwm1000_ts_u64_to_pu8(tx_ts, msg.tx_ts);
 
 	dwt_forcetrxoff();
 	dwt_writetxdata(sizeof(sf_anchor_msg_t) + 2, (uint8_t*)&msg, 0);
@@ -326,13 +304,11 @@ int impl_anchor_init()
 	LOGI(TAG,"addr: %04X\n", m_anchor_id);
 	LOGI(TAG,"sf length: %d\n", TIMING_SUPERFRAME_LENGTH_MS);
 
-	NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
-	NRF_CLOCK->TASKS_HFCLKSTART = 1;
 
-	gpiote_init();
 
 	LOGI(TAG,"initialize dw1000 phy\n");
 	dwm1000_phy_init();
+    dwm1000_irq_enable();
 
 	dwt_setcallbacks(mac_txok_callback_impl, mac_rxok_callback_impl, NULL, mac_rxerr_callback_impl);
 
@@ -356,19 +332,6 @@ int impl_anchor_init()
 	return 0;
 }
 
-void impl_anchor_loop()
-{
-	while(1)
-	{
-		//__WFI();
-		//__WFI();
-		/*dwt_forcetrxoff();
-		dwt_writetxdata(4, (uint8_t*)"AB", 0);
-		dwt_writetxfctrl(4, 0, 1);   // add CRC
-		dwt_starttx(DWT_START_TX_IMMEDIATE);*/
 
-		nrf_delay_ms(500);
-	}
-}
 
 

@@ -37,41 +37,18 @@ static inline uint16_t min(uint16_t a, uint16_t b)
 
 static uint8_t m_rx_data[TX_RX_BUF_LENGTH] = {0};
 
-uint64_t dwm1000_get_system_time_u64(void)
+dwm1000_ts_t dwm1000_get_system_time_u64(void)
 {
-    uint8_t ts_tab[5];
-    uint64_t ts = 0;
-    int i;
-    dwt_readsystime(ts_tab);
-    for (i = 4; i >= 0; i--)
-    {
-        ts <<= 8;
-        ts |= ts_tab[i];
-    }
+    dwm1000_ts_t ts = { 0 };
+    dwt_readsystime(ts.ts_bytes);
     return ts;
 }
 
-uint64_t dwm1000_get_rx_timestamp_u64(void)
+dwm1000_ts_t dwm1000_get_rx_timestamp_u64(void)
 {
-    uint8_t ts_tab[5];
-    uint64_t ts = 0;
-    int i;
-    dwt_readrxtimestamp(ts_tab);
-    for (i = 4; i >= 0; i--)
-    {
-        ts <<= 8;
-        ts |= ts_tab[i];
-    }
+    dwm1000_ts_t ts = { 0 };
+    dwt_readrxtimestamp(ts.ts_bytes);
     return ts;
-}
-
-void dwm1000_timestamp_u64_to_pu8(uint64_t ts, uint8_t *out)
-{
-	for(int i = 0; i <= 4; i++)
-	{
-		out[i] = ts & 0xFF;
-		ts >>= 8;
-	}
 }
 
 

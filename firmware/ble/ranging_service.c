@@ -3,7 +3,7 @@
 #include "nrf_log.h"
 #include <sdk_macros.h>
 
-uint32_t ble_rs_init(ble_rs_t *p_rs)
+uint32_t ble_rs_init(ble_rs_t *p_rs, uint16_t max_ranging_count)
 {
     uint32_t              err_code;
     ble_uuid_t            ble_uuid;
@@ -24,7 +24,7 @@ uint32_t ble_rs_init(ble_rs_t *p_rs)
     add_char_params.uuid              = RS_UUID_EXAMPLE_CHAR;
     add_char_params.uuid_type         = p_rs->uuid_type;
     add_char_params.init_len          = sizeof(uint8_t);
-    add_char_params.max_len           = sizeof(uint8_t)*5;
+    add_char_params.max_len           = sizeof(uint8_t);
     add_char_params.char_props.read   = 1;
     add_char_params.char_props.write  = 1;
 
@@ -45,7 +45,7 @@ uint32_t ble_rs_init(ble_rs_t *p_rs)
     add_char_params.uuid              = RS_UUID_RANGING_CHAR;
     add_char_params.uuid_type         = p_rs->uuid_type;
     add_char_params.init_len          = sizeof(uint16_t);
-    add_char_params.max_len           = sizeof(uint16_t);
+    add_char_params.max_len           = max_ranging_count * sizeof(uint16_t);
     add_char_params.char_props.read   = 1;
     add_char_params.char_props.notify = 1;
 
@@ -88,16 +88,23 @@ void ble_rs_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
     }
 }
 
-uint32_t ble_rs_send_notification(uint16_t conn_handle, ble_rs_t * p_rs, uint16_t counter)
+uint32_t ble_rs_send_ranging(uint16_t conn_handle, ble_rs_t * p_rs, uint16_t* ranging_data, uint16_t ranging_count)
 {
-    ble_gatts_hvx_params_t params;
-    uint16_t len = sizeof(uint16_t);
+    if(conn_handle != BLE_CONN_HANDLE_INVALID)
+    {
+        ble_gatts_hvx_params_t params;
+        uint16_t len = sizeof(uint16_t) * ranging_count;
 
-    memset(&params, 0, sizeof(params));
-    params.type   = BLE_GATT_HVX_NOTIFICATION;
-    params.handle = p_rs->ranging_char_handles.value_handle;
-    params.p_data = (uint8_t*)&counter;
-    params.p_len  = &len;
+        memset(&params, 0, sizeof(params));
+        params.type   = BLE_GATT_HVX_NOTIFICATION;
+        params.handle = p_rs->ranging_char_handles.value_handle;
+        params.p_data = (uint8_t*)ranging_data;
+        params.p_len  = &len;
 
-    return sd_ble_gatts_hvx(conn_handle, &params);
+        return sd_ble_gatts_hvx(conn_handle, &params);
+    }
+    else
+    {
+        return NRF_SUCCESS;
+    }
 }

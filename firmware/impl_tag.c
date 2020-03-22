@@ -1,6 +1,7 @@
 #include "impl_tag.h"
 #include <stdint.h>
 
+#include "app_scheduler.h"
 #include "dwm_utils.h"
 #include "log.h"
 #include "utils.h"
@@ -13,6 +14,9 @@
 #include "nrf_drv_timer.h"
 #include "timing.h"
 #include "uart.h"
+
+#include "ranging.h"
+#include "ble_func.h"
 
 #define TAG "tag"
 
@@ -52,10 +56,10 @@ static void set_tag_state(tag_state_t newstate)
 	m_tag_state = newstate;
 }
 
-inline static uint32_t get_slot_time_by_message(uint64_t rx_ts)
+inline static uint32_t get_slot_time_by_message(dwm1000_ts_t rx_ts)
 {
-	uint32_t rx_ts_32 = rx_ts >> 8;
-	uint32_t systime_32 = dwm1000_get_system_time_u64() >> 8;
+    uint32_t rx_ts_32 = rx_ts.ts >> 8;
+    uint32_t systime_32 = dwm1000_get_system_time_u64().ts >> 8;
 
 	return (systime_32-rx_ts_32)/(UUS_TO_DWT_TIME/256) + TIMING_MESSAGE_TX_PREFIX_TIME_US;
 }
@@ -158,9 +162,9 @@ static void transmit_tag_msg() {
 	msg.hdr.src_id = m_tag_id;
 	msg.hdr.fctrl = SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE;
 
-	uint64_t sys_ts = dwm1000_get_system_time_u64();
+    uint64_t sys_ts = dwm1000_get_system_time_u64().ts;
 	uint32_t tx_ts_32 = (sys_ts + (TIMING_MESSAGE_TX_PREFIX_TIME_US * UUS_TO_DWT_TIME)) >> 8;
-	uint64_t tx_ts = (((uint64_t)(tx_ts_32 & 0xFFFFFFFEUL)) << 8);
+    dwm1000_ts_t tx_ts = { .ts = (((uint64_t)(tx_ts_32 & 0xFFFFFFFEUL)) << 8) };
 
 	//dwm1000_timestamp_u64_to_pu8(tx_ts, msg.tx_ts);
 
@@ -173,9 +177,16 @@ static void transmit_tag_msg() {
 		LOGE(TAG, "err: starttx\n");
 	}
 
-	log_tag_message(&msg, tx_ts);
+    log_tag_message(&msg, tx_ts.ts);
+
+    ranging_on_tag_tx(tx_ts);
 }
 
+static void ranging_scheduler_event_handler(void *p_event_data, uint16_t event_size)
+{
+    LOGI(TAG, "sending ranging (%d)\n", event_size);
+    ble_func_send_ranging(p_event_data, event_size);
+}
 
 
 static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t datalength)
@@ -188,6 +199,7 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 		LOGT(TAG, "SF\n");
 
 		m_received_sync_messages_count = 0;
+        ranging_on_new_superframe();
 	}
 
 	if(m_tag_state == TAG_STATE__DISCOVERY)
@@ -220,7 +232,7 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 			sf_header_t* hdr = (sf_header_t*)data;
 			if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
 			{
-				uint64_t rx_ts = dwm1000_get_rx_timestamp_u64();
+                dwm1000_ts_t rx_ts = dwm1000_get_rx_timestamp_u64();
 				uint32_t slot_time_us = get_slot_time_by_message(rx_ts);
 				uint32_t sf_time_us = hdr->src_id * TIMING_ANCHOR_MESSAGE_LENGTH_US + slot_time_us;
 
@@ -235,7 +247,8 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 
 				m_received_sync_messages_count++;
 				m_unsynced_sf_count = 0;
-				log_anchor_message(msg,rx_ts);
+                log_anchor_message(msg,rx_ts.ts);
+                ranging_on_anchor_rx(rx_ts, msg);
 			}
 		}
 		else if(event_type == EVENT_TIMER)
@@ -243,12 +256,12 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 			if(m_received_sync_messages_count == 0)
 			{
 				m_unsynced_sf_count++;
-				LOGE(TAG, "sync lost\n");
+                LOGW(TAG, "sync warn\n");
 
 				if(m_unsynced_sf_count > 5)
 				{
 					set_tag_state(TAG_STATE__DISCOVERY);
-
+                    LOGE(TAG, "sync lost\n");
 
 					return;
 				}
@@ -257,6 +270,7 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 
 			transmit_tag_msg();
 
+            app_sched_event_put(ranging_get_distances(), TIMING_ANCHOR_COUNT, ranging_scheduler_event_handler);
 		}
 	}
 }
@@ -295,6 +309,8 @@ int impl_tag_init()
 
     //NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
     //NRF_CLOCK->TASKS_HFCLKSTART = 1;
+
+    ranging_init(m_tag_id);
 
     dwm1000_irq_enable();
     uart_init();

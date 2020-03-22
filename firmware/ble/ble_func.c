@@ -71,6 +71,7 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+#include "timing.h"
 
 #define ADVERTISING_LED                 BSP_BOARD_LED_0                         /**< Is on when device is advertising. */
 #define CONNECTED_LED                   BSP_BOARD_LED_1                         /**< Is on when device has connected. */
@@ -83,8 +84,8 @@
 #define APP_ADV_DURATION                BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
 
 
-#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (1.25 ms based). */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(200, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (1.25 ms based). */
+#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (1.25 ms based). */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(40, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (1.25 ms based). */
 #define SLAVE_LATENCY                   0                                       /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory time-out (10 ms based). */
 
@@ -263,7 +264,7 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
 
 /**@brief Function for initializing services that will be used by the application.
  */
-static void services_init(void)
+static void services_init(uint16_t max_ranging_count)
 {
     ret_code_t         err_code;
     nrf_ble_qwr_init_t qwr_init = {0};
@@ -274,7 +275,7 @@ static void services_init(void)
     err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
     ERROR_CHECK(err_code, NRF_SUCCESS);
 
-    err_code = ble_rs_init(&m_rs);
+    err_code = ble_rs_init(&m_rs, max_ranging_count);
     ERROR_CHECK(err_code, NRF_SUCCESS);
 }
 
@@ -451,12 +452,12 @@ static void ble_stack_init(void)
 
 /**@brief Function for application main entry.
  */
-int ble_func_init(const char* device_name)
+int ble_func_init(const char* device_name, uint16_t max_ranging_count)
 {
     ble_stack_init();
     gap_params_init(device_name);
     gatt_init();
-    services_init();
+    services_init(max_ranging_count);
     advertising_init();
     conn_params_init();
 
@@ -467,3 +468,9 @@ int ble_func_init(const char* device_name)
 /**
  * @}
  */
+
+void ble_func_send_ranging(uint16_t *ranging, uint16_t ranging_count)
+{
+    ret_code_t err_code = ble_rs_send_ranging(m_conn_handle, &m_rs, ranging, ranging_count);
+   // ERROR_CHECK(err_code, NRF_SUCCESS);
+}

@@ -37,6 +37,7 @@
 #include "impl_observer.h"
 #include "impl_anchor.h"
 #include "impl_tag.h"
+#include "timing.h"
 
 #define TAG "main"
 //  debugging with gdb: ./JLinkGDBServer -if SWD -device nRF51822
@@ -145,7 +146,7 @@ int main(void)
     addr_handler_get_device_name(device_name);
     LOGI(TAG,"device name: %s\n", device_name);
 
-    APP_SCHED_INIT(APP_TIMER_SCHED_EVENT_DATA_SIZE, 10);
+    APP_SCHED_INIT(sizeof(uint16_t) * TIMING_ANCHOR_COUNT, 10);
 
     leds_init();
     timers_init();
@@ -163,7 +164,7 @@ int main(void)
             ERROR_CHECK(err_code, NRF_SUCCESS);
 
             sd_clock_hfclk_request();
-            ble_func_init(device_name);
+            ble_func_init(device_name, TIMING_ANCHOR_COUNT);
 
             impl_tag_init();
         }

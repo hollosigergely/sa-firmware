@@ -32,6 +32,8 @@ uint16_t addr_handler_get()
 
         case 822526009735700523U:
             return 0xB001;
+        case 8490415443706040570U:
+            return 0xB002;
         case 4233353996318710681U:
             return 0x2000;
 		default:
@@ -61,6 +63,8 @@ uint16_t addr_handler_get_virtual_addr() {
 
     case 0xB001:
         return 0;
+    case 0xB002:
+        return 1;
     case 0x2000:
         return 0;
 
@@ -91,6 +95,8 @@ bool addr_handler_is_anchor()
 		return false;
 
     case 0xB001:
+        return true;
+    case 0xB002:
         return true;
     case 0x2000:
         return false;
