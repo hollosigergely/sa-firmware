@@ -17,6 +17,7 @@
 
 #include "ranging.h"
 #include "ble_func.h"
+#include "accel.h"
 
 #define TAG "tag"
 
@@ -312,30 +313,31 @@ int impl_tag_init()
 
     ranging_init(m_tag_id);
 
-    dwm1000_irq_enable();
+
     uart_init();
+    accel_init();
+    //LOGI(TAG,"initialize dw1000 phy\n");
+    //dwm1000_phy_init();
+    //dwm1000_irq_enable();
 
-	LOGI(TAG,"initialize dw1000 phy\n");
-	dwm1000_phy_init();
+    //dwt_setcallbacks(mac_txok_callback_impl, mac_rxok_callback_impl, NULL, mac_rxerr_callback_impl);
 
-	dwt_setcallbacks(mac_txok_callback_impl, mac_rxok_callback_impl, NULL, mac_rxerr_callback_impl);
+//	uint32_t err_code;
+//	nrf_drv_timer_config_t timer_cfg = {
+//		.frequency          = NRF_TIMER_FREQ_16MHz,
+//		.mode               = NRF_TIMER_MODE_TIMER,
+//		.bit_width          = NRF_TIMER_BIT_WIDTH_32,
+//		.interrupt_priority = 2,
+//		.p_context          = NULL
+//	};
+//	err_code = nrf_drv_timer_init(&m_frame_timer, &timer_cfg, frame_timer_event_handler);
+//	APP_ERROR_CHECK(err_code);
+//	nrf_drv_timer_enable(&m_frame_timer);
+//	nrf_drv_timer_pause(&m_frame_timer);
 
-	uint32_t err_code;
-	nrf_drv_timer_config_t timer_cfg = {
-		.frequency          = NRF_TIMER_FREQ_16MHz,
-		.mode               = NRF_TIMER_MODE_TIMER,
-		.bit_width          = NRF_TIMER_BIT_WIDTH_32,
-		.interrupt_priority = 2,
-		.p_context          = NULL
-	};
-	err_code = nrf_drv_timer_init(&m_frame_timer, &timer_cfg, frame_timer_event_handler);
-	APP_ERROR_CHECK(err_code);
-	nrf_drv_timer_enable(&m_frame_timer);
-	nrf_drv_timer_pause(&m_frame_timer);
+//	restart_frame_timer();
 
-	restart_frame_timer();
-
-	dwt_rxenable(0);
+//	dwt_rxenable(0);
 
 	return 0;
 }

@@ -62,6 +62,7 @@ set(SRCS
       ${PROJECT_SOURCE_DIR}/utils.c
       ${PROJECT_SOURCE_DIR}/timing.c
       ${PROJECT_SOURCE_DIR}/ranging.c
+      ${PROJECT_SOURCE_DIR}/accel.c
       ${PROJECT_SOURCE_DIR}/ble/ble_func.c
       ${PROJECT_SOURCE_DIR}/ble/ranging_service.c
 
@@ -107,7 +108,6 @@ set(SRCS
       ${NRF5_SDK_ROOT}/modules/nrfx/drivers/src/nrfx_uart.c
       ${NRF5_SDK_ROOT}/modules/nrfx/drivers/src/nrfx_uarte.c
       ${NRF5_SDK_ROOT}/modules/nrfx/drivers/src/nrfx_timer.c
-      ${NRF5_SDK_ROOT}/modules/nrfx/drivers/src/nrfx_spi.c
       ${NRF5_SDK_ROOT}/modules/nrfx/drivers/src/nrfx_spim.c
       ${NRF5_SDK_ROOT}/integration/nrfx/legacy/nrf_drv_spi.c
       ${NRF5_SDK_ROOT}/external/segger_rtt/SEGGER_RTT.c
@@ -123,6 +123,13 @@ set(SRCS
       ${NRF5_SDK_ROOT}/components/softdevice/common/nrf_sdh.c
       ${NRF5_SDK_ROOT}/components/softdevice/common/nrf_sdh_ble.c
       ${NRF5_SDK_ROOT}/components/softdevice/common/nrf_sdh_soc.c
+      ${NRF5_SDK_ROOT}/components/drivers_ext/lis2dh12/lis2dh12.c
+      ${NRF5_SDK_ROOT}/components/libraries/twi_sensor/nrf_twi_sensor.c
+      ${NRF5_SDK_ROOT}/components/libraries/twi_mngr/nrf_twi_mngr.c
+      ${NRF5_SDK_ROOT}/components/libraries/queue/nrf_queue.c
+      ${NRF5_SDK_ROOT}/modules/nrfx/drivers/src/nrfx_twi.c
+      ${NRF5_SDK_ROOT}/modules/nrfx/drivers/src/nrfx_saadc.c
+      ${NRF5_SDK_ROOT}/integration/nrfx/legacy/nrf_drv_twi.c
 )
 
 include_directories(
@@ -130,6 +137,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/config
     ${PROJECT_SOURCE_DIR}/decadriver
     ${PROJECT_SOURCE_DIR}/ble
+
     ${NRF5_SDK_ROOT}/components/nfc/ndef/generic/message
     ${NRF5_SDK_ROOT}/components/nfc/t2t_lib
     ${NRF5_SDK_ROOT}/components/nfc/t4t_parser/hl_detection_procedure
@@ -258,6 +266,10 @@ include_directories(
     ${NRF5_SDK_ROOT}/components/nfc/ndef/conn_hand_parser/ac_rec_parser
     ${NRF5_SDK_ROOT}/components/libraries/stack_guard
     ${NRF5_SDK_ROOT}/components/libraries/log/src
+
+    ${NRF5_SDK_ROOT}/components/drivers_ext/lis2dh12
+    ${NRF5_SDK_ROOT}/components/libraries/twi_sensor/
+    ${NRF5_SDK_ROOT}/components/libraries/twi_mngr/
 )
 
 
