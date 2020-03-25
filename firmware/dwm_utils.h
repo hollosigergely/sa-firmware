@@ -40,13 +40,13 @@ typedef union {
 
 dwm1000_ts_t dwm1000_get_system_time_u64(void);
 dwm1000_ts_t dwm1000_get_rx_timestamp_u64(void);
-inline void dwm1000_ts_to_pu8(dwm1000_ts_t ts, uint8_t* p8)
+static inline void dwm1000_ts_to_pu8(dwm1000_ts_t ts, uint8_t* p8)
 {
     for(int i = 0; i < 5; i++)
         p8[i] = ts.ts_bytes[i];
 }
 
-inline dwm1000_ts_t dwm1000_pu8_to_ts(const uint8_t* p8)
+static inline dwm1000_ts_t dwm1000_pu8_to_ts(const uint8_t* p8)
 {
     dwm1000_ts_t _ts = { 0 };
     for(int i = 0; i < 5; i++)
@@ -54,7 +54,7 @@ inline dwm1000_ts_t dwm1000_pu8_to_ts(const uint8_t* p8)
     return _ts;
 }
 
-inline void dwm1000_ts_u64_to_pu8(uint64_t ts, uint8_t* p8)
+static inline void dwm1000_ts_u64_to_pu8(uint64_t ts, uint8_t* p8)
 {
     dwm1000_ts_t _ts = { 0 };
     _ts.ts = ts;

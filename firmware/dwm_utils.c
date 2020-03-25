@@ -311,7 +311,7 @@ void dwm1000_irq_enable()
     if (!nrf_drv_gpiote_is_init())
     {
         err_code = nrf_drv_gpiote_init();
-        ERROR_CHECK(err_code, NRF_SUCCESS);
+        APP_ERROR_CHECK(err_code);
     }
 
     nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);

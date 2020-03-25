@@ -39,7 +39,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} \
     -O3 -g3")
 
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
-    -g3 -O3 \
+    -O3 -g3  \
     -mthumb -mabi=aapcs \
     -T${PROJECT_SOURCE_DIR}/ld.script/ld_softdevice.ld -L${NRF5_SDK_ROOT}/modules/nrfx/mdk \
     -mcpu=cortex-m4 \

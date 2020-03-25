@@ -347,6 +347,8 @@ int impl_tag_init()
 
     uart_init();
     accel_init(acc_measurement_sched_handler);
+
+    uart_puts("start\n");
 //    LOGI(TAG,"initialize dw1000 phy\n");
 //    dwm1000_phy_init();
 //    dwm1000_irq_enable();

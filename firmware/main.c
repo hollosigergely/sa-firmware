@@ -48,6 +48,8 @@
 //	(gdb) monitor reset/go/halt
 //	(gdb) monitor memU8 <memory_address>
 
+#define LED_HARD_FAULT                  BSP_BOARD_LED_0
+
 #define BUTTON_USER                     BSP_BUTTON_0
 #define BUTTON_USER_INDEX               0
 #define BUTTON_DETECTION_DELAY          APP_TIMER_TICKS(50)
@@ -192,7 +194,7 @@ int main(void)
 
 void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
 {
-	/*volatile uint32_t r0;
+    volatile uint32_t r0;
 	volatile uint32_t r1;
 	volatile uint32_t r2;
 	volatile uint32_t r3;
@@ -209,12 +211,14 @@ void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
 	r12 = pulFaultStackAddress[ 4 ];
 	lr = pulFaultStackAddress[ 5 ];
 	pc = pulFaultStackAddress[ 6 ];
-	psr = pulFaultStackAddress[ 7 ];*/
+    psr = pulFaultStackAddress[ 7 ];
+
+    bsp_board_led_on(LED_HARD_FAULT);
 
 	for( ;; );
 }
 
-/*void HardFault_Handler( void ) __attribute__( ( naked ) );
+void HardFault_Handler( void ) __attribute__( ( naked ) );
 void HardFault_Handler(void)
 {
 	__asm volatile
@@ -228,5 +232,5 @@ void HardFault_Handler(void)
 		" bx r2                                                     \n"
 		" handler2_address_const: .word prvGetRegistersFromStack    \n"
 	);
-}*/
+}
 

@@ -70,13 +70,13 @@ static void gpiote_init()
     if (!nrf_drv_gpiote_is_init())
     {
         err_code = nrf_drv_gpiote_init();
-        ERROR_CHECK(err_code, NRF_SUCCESS);
+        APP_ERROR_CHECK(err_code);
     }
 
     nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
     in_config.pull = NRF_GPIO_PIN_PULLUP;
     err_code = nrf_drv_gpiote_in_init(ACCEL_INT_PIN, &in_config, gpiote_event_handler);
-    ERROR_CHECK(err_code, NRF_SUCCESS);
+    APP_ERROR_CHECK(err_code);
 
     nrf_drv_gpiote_in_event_enable(ACCEL_INT_PIN, true);
 }
@@ -96,13 +96,13 @@ void accel_init(app_sched_event_handler_t handler)
     };
 
     err_code = nrf_twi_mngr_init(&m_nrf_twi_mngr, &twi_config);
-    ERROR_CHECK(err_code, NRF_SUCCESS);
+    APP_ERROR_CHECK(err_code);
 
     err_code = nrf_twi_sensor_init(&m_nrf_twi_sensor);
-    ERROR_CHECK(err_code, NRF_SUCCESS);
+    APP_ERROR_CHECK(err_code);
 
     err_code = lis2dh12_init(&m_lis2dh12);
-    ERROR_CHECK(err_code, NRF_SUCCESS);
+    APP_ERROR_CHECK(err_code);
 
 
     lis2dh12_who_am_i_read(&m_lis2dh12, accel_print_identity, &m_reg_value);
@@ -124,7 +124,7 @@ void accel_init(app_sched_event_handler_t handler)
     // data acquisition configuration: 10HZ sample rate, low power mode, x axis, y axis, z axis, values in range -2g <-> +2g, disable high resolution mode (in this case step size is 256)
     LIS2DH12_DATA_CFG(m_lis2dh12, LIS2DH12_ODR_POWERDOWN, false, true, true, true, LIS2DH12_SCALE_4G, false);
     err_code = lis2dh12_cfg_commit(&m_lis2dh12);
-    ERROR_CHECK(err_code, NRF_SUCCESS);
+    APP_ERROR_CHECK(err_code);
 
 
 /**
@@ -145,7 +145,7 @@ void accel_init(app_sched_event_handler_t handler)
 
     LIS2DH12_FIFO_CFG(m_lis2dh12, true, LIS2DH12_STREAM, false, ACCEL_FIFO_BURST_SIZE - 1);
     err_code = lis2dh12_cfg_commit(&m_lis2dh12);
-    ERROR_CHECK(err_code, NRF_SUCCESS);
+    APP_ERROR_CHECK(err_code);
 
 
     /**
@@ -161,7 +161,7 @@ void accel_init(app_sched_event_handler_t handler)
      */
     LIS2DH12_FILTER_CFG(m_lis2dh12, LIS2DH12_FILTER_MODE_AUTO_RESET, LIS2DH12_FILTER_FREQ_4, false, false, false, false);
     err_code = lis2dh12_cfg_commit(&m_lis2dh12);
-    ERROR_CHECK(err_code, NRF_SUCCESS);
+    APP_ERROR_CHECK(err_code);
 
 
     /**
@@ -182,14 +182,14 @@ void accel_init(app_sched_event_handler_t handler)
 
     LIS2DH12_INT1_PIN_CFG(m_lis2dh12, 0, 0, 0, 0, 1, 0, 1, 0);
     err_code = lis2dh12_cfg_commit(&m_lis2dh12);
-    ERROR_CHECK(err_code, NRF_SUCCESS);
+    APP_ERROR_CHECK(err_code);
 
     nrf_delay_us(1000);
 
     nrf_gpio_cfg_input(ACCEL_INT_PIN, NRF_GPIO_PIN_PULLUP);
     gpiote_init();
 
-    accel_enable();
+    //accel_enable();
 }
 
 
@@ -199,7 +199,7 @@ void accel_enable()
 
     LIS2DH12_DATA_CFG(m_lis2dh12, LIS2DH12_ODR_50HZ, false, true, true, true, LIS2DH12_SCALE_4G, false);
     err_code = lis2dh12_cfg_commit(&m_lis2dh12);
-    ERROR_CHECK(err_code, NRF_SUCCESS);
+    APP_ERROR_CHECK(err_code);
 
     utils_start_tick_timer();
 }
@@ -210,7 +210,7 @@ void accel_disable()
 
     LIS2DH12_DATA_CFG(m_lis2dh12, LIS2DH12_ODR_POWERDOWN, false, true, true, true, LIS2DH12_SCALE_4G, false);
     err_code = lis2dh12_cfg_commit(&m_lis2dh12);
-    ERROR_CHECK(err_code, NRF_SUCCESS);
+    APP_ERROR_CHECK(err_code);
 
     utils_stop_tick_timer();
 }

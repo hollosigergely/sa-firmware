@@ -46,7 +46,7 @@ void utils_start_tick_timer() {
     nrfx_rtc_config_t config = NRFX_RTC_DEFAULT_CONFIG;
     config.prescaler = 32;      // 1.007 ms
     err_code = nrfx_rtc_init(&m_tick_timer, &config, rtc_handler);
-    ERROR_CHECK(err_code, NRF_SUCCESS);
+    APP_ERROR_CHECK(err_code);
 
     nrfx_rtc_enable(&m_tick_timer);
 }
