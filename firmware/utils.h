@@ -19,6 +19,9 @@ void utils_init();
 void utils_start_execution_timer();
 uint32_t utils_stop_execution_timer();
 
+void utils_start_tick_timer();
+void utils_stop_tick_timer();
+uint32_t utils_get_tick_time();
 
 
 #endif // UTILS_H

@@ -27,6 +27,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} \
     -DNRF52_PAN_74 \
     -DNRF_SD_BLE_API_VERSION=7 \
     -DS132 \
+    -DDEBUG \
     -DSOFTDEVICE_PRESENT \
     -mcpu=cortex-m4 \
     -mthumb -mabi=aapcs \
@@ -63,8 +64,10 @@ set(SRCS
       ${PROJECT_SOURCE_DIR}/timing.c
       ${PROJECT_SOURCE_DIR}/ranging.c
       ${PROJECT_SOURCE_DIR}/accel.c
+      ${PROJECT_SOURCE_DIR}/data_format.c
       ${PROJECT_SOURCE_DIR}/ble/ble_func.c
       ${PROJECT_SOURCE_DIR}/ble/ranging_service.c
+      ${PROJECT_SOURCE_DIR}/ble/accel_service.c
 
       ${NRF5_SDK_ROOT}/modules/nrfx/mdk/gcc_startup_nrf52.S
       ${NRF5_SDK_ROOT}/components/libraries/log/src/nrf_log_backend_rtt.c
@@ -130,6 +133,7 @@ set(SRCS
       ${NRF5_SDK_ROOT}/modules/nrfx/drivers/src/nrfx_twi.c
       ${NRF5_SDK_ROOT}/modules/nrfx/drivers/src/nrfx_saadc.c
       ${NRF5_SDK_ROOT}/integration/nrfx/legacy/nrf_drv_twi.c
+      ${NRF5_SDK_ROOT}/modules/nrfx/drivers/src/nrfx_rtc.c
 )
 
 include_directories(

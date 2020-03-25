@@ -3,9 +3,11 @@
 #include "nrf_drv_timer.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
+#include "nrfx_rtc.h"
 #include "app_util.h"
 
 const static nrf_drv_timer_t m_execution_timer = NRF_DRV_TIMER_INSTANCE(4);
+const nrfx_rtc_t m_tick_timer = NRFX_RTC_INSTANCE(2);
 
 void utils_init()
 {
@@ -33,12 +35,36 @@ uint32_t utils_stop_execution_timer()
 	return counter >> 4;
 }
 
+static void rtc_handler(nrfx_rtc_int_type_t int_type)
+{
+
+}
+
+void utils_start_tick_timer() {
+    ret_code_t err_code;
+
+    nrfx_rtc_config_t config = NRFX_RTC_DEFAULT_CONFIG;
+    config.prescaler = 32;      // 1.007 ms
+    err_code = nrfx_rtc_init(&m_tick_timer, &config, rtc_handler);
+    ERROR_CHECK(err_code, NRF_SUCCESS);
+
+    nrfx_rtc_enable(&m_tick_timer);
+}
+
+void utils_stop_tick_timer() {
+    nrfx_rtc_disable(&m_tick_timer);
+}
+
+uint32_t utils_get_tick_time() {
+    return nrfx_rtc_counter_get(&m_tick_timer);
+}
+
 __attribute__((weak))
 void my_error_function(int code, const char *filename, const int line)
 {
     __disable_irq();
 
-    NRF_LOG_ERROR("FE: %d (%s:%d)", code, filename, line);
+    NRF_LOG_ERROR("FE: 0x%04X (%s:%d)", code, filename, line);
     NRF_LOG_FINAL_FLUSH();
 
     for(;;) {}

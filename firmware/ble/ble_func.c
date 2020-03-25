@@ -44,6 +44,7 @@
  */
 #include "ble_func.h"
 
+#include <assert.h>
 #include <stdint.h>
 #include <string.h>
 #include "nordic_common.h"
@@ -62,6 +63,7 @@
 #include "utils.h"
 
 #include "ranging_service.h"
+#include "accel_service.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
 
@@ -72,6 +74,7 @@
 #include "nrf_log_default_backends.h"
 
 #include "timing.h"
+#include "data_format.h"
 
 #define ADVERTISING_LED                 BSP_BOARD_LED_0                         /**< Is on when device is advertising. */
 #define CONNECTED_LED                   BSP_BOARD_LED_1                         /**< Is on when device has connected. */
@@ -85,7 +88,7 @@
 
 
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (1.25 ms based). */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(40, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (1.25 ms based). */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(TIMING_SUPERFRAME_LENGTH_MS, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (1.25 ms based). */
 #define SLAVE_LATENCY                   0                                       /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory time-out (10 ms based). */
 
@@ -93,11 +96,16 @@
 #define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000)                   /**< Time between each call to sd_ble_gap_conn_param_update after the first call (5 seconds). */
 #define MAX_CONN_PARAMS_UPDATE_COUNT    3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
 
+#define ATT_MTU_SIZE                    65
+static_assert((sizeof(df_accel_info_t) <= (ATT_MTU_SIZE - 3)) &&
+                (sizeof(df_ranging_info_t) <= (ATT_MTU_SIZE - 3)), "Watch out for ATT_MTU size!");
+static_assert(ATT_MTU_SIZE <= NRF_SDH_BLE_GATT_MAX_MTU_SIZE, "Modify max MTU size!");
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
 
-BLE_RS_DEF(m_rs);                                                       /**< LED Button Service instance. */
+BLE_RS_DEF(m_rs);
+BLE_ACCS_DEF(m_accs);
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 
@@ -177,6 +185,9 @@ static void gap_params_init(const char* device_name)
 static void gatt_init(void)
 {
     ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, NULL);
+    ERROR_CHECK(err_code, NRF_SUCCESS);
+
+    err_code = nrf_ble_gatt_att_mtu_periph_set(&m_gatt, ATT_MTU_SIZE);
     ERROR_CHECK(err_code, NRF_SUCCESS);
 }
 
@@ -264,7 +275,7 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
 
 /**@brief Function for initializing services that will be used by the application.
  */
-static void services_init(uint16_t max_ranging_count)
+static void services_init()
 {
     ret_code_t         err_code;
     nrf_ble_qwr_init_t qwr_init = {0};
@@ -275,7 +286,10 @@ static void services_init(uint16_t max_ranging_count)
     err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
     ERROR_CHECK(err_code, NRF_SUCCESS);
 
-    err_code = ble_rs_init(&m_rs, max_ranging_count);
+    err_code = ble_rs_init(&m_rs);
+    ERROR_CHECK(err_code, NRF_SUCCESS);
+
+    err_code = ble_accs_init(&m_accs);
     ERROR_CHECK(err_code, NRF_SUCCESS);
 }
 
@@ -452,16 +466,18 @@ static void ble_stack_init(void)
 
 /**@brief Function for application main entry.
  */
-int ble_func_init(const char* device_name, uint16_t max_ranging_count)
+int ble_func_init(const char* device_name)
 {
     ble_stack_init();
     gap_params_init(device_name);
     gatt_init();
-    services_init(max_ranging_count);
+    services_init();
     advertising_init();
     conn_params_init();
 
     advertising_start();
+
+    return NRF_SUCCESS;
 }
 
 
@@ -469,8 +485,20 @@ int ble_func_init(const char* device_name, uint16_t max_ranging_count)
  * @}
  */
 
-void ble_func_send_ranging(uint16_t *ranging, uint16_t ranging_count)
+void ble_func_send_ranging(df_ranging_info_t *ranging)
 {
-    ret_code_t err_code = ble_rs_send_ranging(m_conn_handle, &m_rs, ranging, ranging_count);
-   // ERROR_CHECK(err_code, NRF_SUCCESS);
+    if(m_conn_handle != BLE_CONN_HANDLE_INVALID)
+    {
+        ret_code_t err_code = ble_rs_send_ranging(m_conn_handle, &m_rs, ranging);
+        //ERROR_CHECK(err_code, NRF_SUCCESS);
+    }
+}
+
+void ble_func_send_accel_values(df_accel_info_t *accel_info)
+{
+    if(m_conn_handle != BLE_CONN_HANDLE_INVALID)
+    {
+        ret_code_t err_code = ble_accs_send_values(m_conn_handle, &m_accs, accel_info);
+        //ERROR_CHECK(err_code, NRF_SUCCESS); BLE_ERROR_GATTS_SYS_ATTR_MISSING
+    }
 }

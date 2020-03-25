@@ -45,6 +45,7 @@ static uint8_t					m_superframe_id = 0;
 static uint8_t					m_rx_buffer[SF_MAX_MESSAGE_SIZE];
 static uint8_t					m_received_sync_messages_count = 0;
 static uint8_t					m_unsynced_sf_count = 0;
+static uint16_t                 m_superframe_ts = 0;
 
 static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context);
 static void restart_frame_timer();
@@ -183,10 +184,36 @@ static void transmit_tag_msg() {
     ranging_on_tag_tx(tx_ts);
 }
 
-static void ranging_scheduler_event_handler(void *p_event_data, uint16_t event_size)
+static void ranging_sched_handler(void *p_event_data, uint16_t event_size)
 {
     LOGI(TAG, "sending ranging (%d)\n", event_size);
-    ble_func_send_ranging(p_event_data, event_size);
+
+    df_ranging_info_t* ranging = p_event_data;
+    LOGI(TAG, "ranging ts: %" PRIu16 "\n", ranging->ts);
+    for(int i = 0; i < TIMING_ANCHOR_COUNT; i++)
+    {
+        LOGI(TAG, " dist %d: %" PRIu16 "\n", i, ranging->values[i]);
+    }
+
+    ble_func_send_ranging((df_ranging_info_t*)p_event_data);
+}
+
+
+static void acc_measurement_sched_handler(void * p_event_data, uint16_t event_size)
+{
+    df_accel_info_t* event = p_event_data;
+
+    LOGT(TAG,"Ts: %" PRIu16 "\n", event->ts);
+    for (uint8_t i = 0; i < ACCEL_FIFO_BURST_SIZE; i++)
+    {
+        int16_t x = (event->values[i].x);
+        int16_t y = (event->values[i].y);
+        int16_t z = (event->values[i].z);
+
+        LOGT(TAG,"Accel: %" PRIi16 ", %" PRIi16 ", %" PRIi16 "\n", x, y, z);
+    }
+
+    ble_func_send_accel_values((df_accel_info_t*)p_event_data);
 }
 
 
@@ -196,6 +223,8 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 
 	if(event_type == EVENT_SF_BEGIN)
 	{
+        m_superframe_ts = (uint16_t)utils_get_tick_time();
+
 		restart_frame_timer();
 		LOGT(TAG, "SF\n");
 
@@ -271,7 +300,11 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 
 			transmit_tag_msg();
 
-            app_sched_event_put(ranging_get_distances(), TIMING_ANCHOR_COUNT, ranging_scheduler_event_handler);
+            df_ranging_info_t ranging_info;
+            ranging_info.ts = m_superframe_ts;
+            memcpy(ranging_info.values, ranging_get_distances(), TIMING_ANCHOR_COUNT * sizeof(uint16_t));
+
+            app_sched_event_put(&ranging_info, sizeof(df_ranging_info_t), ranging_sched_handler);
 		}
 	}
 }
@@ -283,8 +316,6 @@ static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_cont
 	else if(event_type == NRF_TIMER_EVENT_COMPARE1)
 		event_handler(EVENT_SF_BEGIN, NULL, 0);
 }
-
-
 
 
 
@@ -315,29 +346,29 @@ int impl_tag_init()
 
 
     uart_init();
-    accel_init();
-    //LOGI(TAG,"initialize dw1000 phy\n");
-    //dwm1000_phy_init();
-    //dwm1000_irq_enable();
+    accel_init(acc_measurement_sched_handler);
+//    LOGI(TAG,"initialize dw1000 phy\n");
+//    dwm1000_phy_init();
+//    dwm1000_irq_enable();
 
-    //dwt_setcallbacks(mac_txok_callback_impl, mac_rxok_callback_impl, NULL, mac_rxerr_callback_impl);
+//    dwt_setcallbacks(mac_txok_callback_impl, mac_rxok_callback_impl, NULL, mac_rxerr_callback_impl);
 
-//	uint32_t err_code;
-//	nrf_drv_timer_config_t timer_cfg = {
-//		.frequency          = NRF_TIMER_FREQ_16MHz,
-//		.mode               = NRF_TIMER_MODE_TIMER,
-//		.bit_width          = NRF_TIMER_BIT_WIDTH_32,
-//		.interrupt_priority = 2,
-//		.p_context          = NULL
-//	};
-//	err_code = nrf_drv_timer_init(&m_frame_timer, &timer_cfg, frame_timer_event_handler);
-//	APP_ERROR_CHECK(err_code);
-//	nrf_drv_timer_enable(&m_frame_timer);
-//	nrf_drv_timer_pause(&m_frame_timer);
+//    uint32_t err_code;
+//    nrf_drv_timer_config_t timer_cfg = {
+//        .frequency          = NRF_TIMER_FREQ_16MHz,
+//        .mode               = NRF_TIMER_MODE_TIMER,
+//        .bit_width          = NRF_TIMER_BIT_WIDTH_32,
+//        .interrupt_priority = 2,
+//        .p_context          = NULL
+//    };
+//    err_code = nrf_drv_timer_init(&m_frame_timer, &timer_cfg, frame_timer_event_handler);
+//    APP_ERROR_CHECK(err_code);
+//    nrf_drv_timer_enable(&m_frame_timer);
+//    nrf_drv_timer_pause(&m_frame_timer);
 
-//	restart_frame_timer();
+//    restart_frame_timer();
 
-//	dwt_rxenable(0);
+//    dwt_rxenable(0);
 
 	return 0;
 }

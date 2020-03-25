@@ -20,27 +20,26 @@
 #include <inttypes.h>
 
 #include "sdk_errors.h"
-#include "lis2dh12.h"
 #include "nrf_twi_mngr.h"
+
 
 #define TAG "accel"
 
 #define TWI_INSTANCE_ID             1
 #define MAX_PENDING_TRANSACTIONS    33
-#define LIS2DH12_MIN_QUEUE_SIZE     31
+
 
 #define ACCEL_INT_PIN		25   //P0.25
 #define I2C_SCL_PIN         28   //P0.28
 #define I2C_SDA_PIN         29   //P0.29
 
 NRF_TWI_MNGR_DEF(m_nrf_twi_mngr, MAX_PENDING_TRANSACTIONS, TWI_INSTANCE_ID);
-NRF_TWI_SENSOR_DEF(m_nrf_twi_sensor, &m_nrf_twi_mngr, LIS2DH12_MIN_QUEUE_SIZE);
+NRF_TWI_SENSOR_DEF(m_nrf_twi_sensor, &m_nrf_twi_mngr, MAX_PENDING_TRANSACTIONS);
 LIS2DH12_INSTANCE_DEF(m_lis2dh12, &m_nrf_twi_sensor, LIS2DH12_BASE_ADDRESS_HIGH);
 
-static uint8_t                  m_reg_value;
-static lis2dh12_data_t          m_sample[LIS2DH12_MIN_QUEUE_SIZE];
-static int16_t                  m_accel[3];
-
+static uint8_t                      m_reg_value;
+static df_accel_info_t              m_sample;
+static app_sched_event_handler_t    m_event_handler = NULL;
 
 static void accel_print_identity(ret_code_t result, void * p_register_data)
 {
@@ -49,19 +48,9 @@ static void accel_print_identity(ret_code_t result, void * p_register_data)
 
 static void accel_get_accel_data_cb(ret_code_t result, lis2dh12_data_t * p_data)
 {
-    for (uint8_t i = 0; i < 10; i++)
-    {
-        int16_t x = m_accel[0] = (p_data[i].x);
-        int16_t y = m_accel[1] = (p_data[i].y);
-        int16_t z = m_accel[2] = (p_data[i].z);
-
-        LOGI(TAG,"Accel: %" PRIi16 ", %" PRIi16 ", %" PRIi16 "\n", x, y, z);
-    }
-}
-
-int16_t accel_get_accel_data(int idx)
-{
-    return m_accel[idx];
+    m_sample.ts = (uint16_t)utils_get_tick_time();
+    if(m_event_handler != NULL)
+        app_sched_event_put(&m_sample, sizeof(df_accel_info_t), m_event_handler);
 }
 
 static void gpiote_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
@@ -70,8 +59,7 @@ static void gpiote_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t
     {
         LOGT(TAG,"acc_irq()\n");
 
-        memset(m_sample,0,LIS2DH12_MIN_QUEUE_SIZE * sizeof(lis2dh12_data_t));
-        lis2dh12_data_read(&m_lis2dh12, accel_get_accel_data_cb, m_sample, 10);
+        lis2dh12_data_read(&m_lis2dh12, accel_get_accel_data_cb, m_sample.values, ACCEL_FIFO_BURST_SIZE);
     }
 }
 
@@ -94,8 +82,10 @@ static void gpiote_init()
 }
 
 
-void accel_init(void)
+void accel_init(app_sched_event_handler_t handler)
 {
+    m_event_handler = handler;
+
     ret_code_t err_code;
     const nrf_drv_twi_config_t twi_config =
     {
@@ -153,7 +143,7 @@ void accel_init(void)
     APP_ERROR_CHECK(err_code);
 */
 
-    LIS2DH12_FIFO_CFG(m_lis2dh12, true, LIS2DH12_STREAM, false, 9);
+    LIS2DH12_FIFO_CFG(m_lis2dh12, true, LIS2DH12_STREAM, false, ACCEL_FIFO_BURST_SIZE - 1);
     err_code = lis2dh12_cfg_commit(&m_lis2dh12);
     ERROR_CHECK(err_code, NRF_SUCCESS);
 
@@ -210,6 +200,8 @@ void accel_enable()
     LIS2DH12_DATA_CFG(m_lis2dh12, LIS2DH12_ODR_50HZ, false, true, true, true, LIS2DH12_SCALE_4G, false);
     err_code = lis2dh12_cfg_commit(&m_lis2dh12);
     ERROR_CHECK(err_code, NRF_SUCCESS);
+
+    utils_start_tick_timer();
 }
 
 void accel_disable()
@@ -219,4 +211,6 @@ void accel_disable()
     LIS2DH12_DATA_CFG(m_lis2dh12, LIS2DH12_ODR_POWERDOWN, false, true, true, true, LIS2DH12_SCALE_4G, false);
     err_code = lis2dh12_cfg_commit(&m_lis2dh12);
     ERROR_CHECK(err_code, NRF_SUCCESS);
+
+    utils_stop_tick_timer();
 }

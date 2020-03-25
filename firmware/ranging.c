@@ -94,7 +94,7 @@ void ranging_on_anchor_rx(dwm1000_ts_t rx_ts, sf_anchor_msg_t *msg)
                    new_ri->anchor_msg_tx_ts,
                    new_ri->anchor_msg_rx_ts);
 
-        LOGI(TAG, "distance from %d: %" PRIu16 "\n", msg->hdr.src_id, distance);
+        LOGT(TAG, "distance from %d: %" PRIu16 "\n", msg->hdr.src_id, distance);
 
         m_anchor_distances[msg->hdr.src_id] = distance;
     }

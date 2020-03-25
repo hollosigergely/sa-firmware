@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include "decadriver/deca_param_types.h"
 #include "decadriver/deca_device_api.h"
-
+#include "../firmware/timing.h"
 
 static dwt_config_t config_long = {
 		4,               // Channel number.
@@ -112,6 +112,7 @@ float dwt_estimate_tx_time( dwt_config_t dwt_config, uint16_t framelength, bool 
 
 int main()
 {
-	printf("%f\n", dwt_estimate_tx_time(config_long, 10, true));
+
+    printf("%d %f\n", sizeof(sf_anchor_msg_t), dwt_estimate_tx_time(config_long, sizeof(sf_anchor_msg_t), false));
 	return 0;
 }

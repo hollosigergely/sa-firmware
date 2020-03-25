@@ -25,6 +25,7 @@ typedef struct
     uint8_t          fctrl;
     uint8_t          padding;
     uint16_t         src_id;
+    uint16_t         group_id;
 } __attribute__((packed)) sf_header_t;
 
 typedef struct {

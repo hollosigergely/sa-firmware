@@ -115,3 +115,8 @@ void addr_handler_get_device_name(char* device_name)
     }
 }
 
+
+uint16_t addr_handler_get_group_id()
+{
+    return 0xBABA;
+}

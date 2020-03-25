@@ -38,6 +38,7 @@
 #include "impl_anchor.h"
 #include "impl_tag.h"
 #include "timing.h"
+#include "accel.h"
 
 #define TAG "main"
 //  debugging with gdb: ./JLinkGDBServer -if SWD -device nRF51822
@@ -50,7 +51,6 @@
 #define BUTTON_USER                     BSP_BUTTON_0
 #define BUTTON_USER_INDEX               0
 #define BUTTON_DETECTION_DELAY          APP_TIMER_TICKS(50)
-
 
 static void log_init(void)
 {
@@ -146,7 +146,12 @@ int main(void)
     addr_handler_get_device_name(device_name);
     LOGI(TAG,"device name: %s\n", device_name);
 
-    APP_SCHED_INIT(sizeof(uint16_t) * TIMING_ANCHOR_COUNT, 10);
+    APP_SCHED_INIT(
+                MAX(
+                    sizeof(df_ranging_info_t),
+                    sizeof(df_accel_info_t)
+                    ),
+                10);
 
     leds_init();
     timers_init();
@@ -164,7 +169,7 @@ int main(void)
             ERROR_CHECK(err_code, NRF_SUCCESS);
 
             sd_clock_hfclk_request();
-            ble_func_init(device_name, TIMING_ANCHOR_COUNT);
+            ble_func_init(device_name);
 
             impl_tag_init();
         }
@@ -181,7 +186,6 @@ int main(void)
         app_sched_execute();
         idle_state_handle();
     }
-
 
 }
 
@@ -210,7 +214,7 @@ void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
 	for( ;; );
 }
 
-void HardFault_Handler( void ) __attribute__( ( naked ) );
+/*void HardFault_Handler( void ) __attribute__( ( naked ) );
 void HardFault_Handler(void)
 {
 	__asm volatile
@@ -224,5 +228,5 @@ void HardFault_Handler(void)
 		" bx r2                                                     \n"
 		" handler2_address_const: .word prvGetRegistersFromStack    \n"
 	);
-}
+}*/
 
