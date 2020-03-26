@@ -48,6 +48,8 @@ static void accel_print_identity(ret_code_t result, void * p_register_data)
 
 static void accel_get_accel_data_cb(ret_code_t result, lis2dh12_data_t * p_data)
 {
+    LOGT(TAG,"accel_cb()\n");
+
     m_sample.ts = (uint16_t)utils_get_tick_time();
     if(m_event_handler != NULL)
         app_sched_event_put(&m_sample, sizeof(df_accel_info_t), m_event_handler);

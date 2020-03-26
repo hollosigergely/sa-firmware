@@ -87,6 +87,7 @@ set(SRCS
       ${NRF5_SDK_ROOT}/components/libraries/util/app_util_platform.c
       ${NRF5_SDK_ROOT}/components/libraries/timer/drv_rtc.c
       ${NRF5_SDK_ROOT}/components/libraries/hardfault/hardfault_implementation.c
+      ${NRF5_SDK_ROOT}/components/libraries/hardfault/nrf52/handler/hardfault_handler_gcc.c
       ${NRF5_SDK_ROOT}/components/libraries/util/nrf_assert.c
       ${NRF5_SDK_ROOT}/components/libraries/atomic_fifo/nrf_atfifo.c
       ${NRF5_SDK_ROOT}/components/libraries/atomic_flags/nrf_atflags.c

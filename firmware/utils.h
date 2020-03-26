@@ -11,8 +11,9 @@ void my_error_function(int code, const char* filename, const int line);
         { \
             my_error_function(x,__FILE__,__LINE__); \
         } \
-    } while(0); \
+    } while(0);
 
+#define ENSURE_ALIGN(A,B) (((A) + (B) - 1) / (B))
 
 void utils_init();
 

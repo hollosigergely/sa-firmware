@@ -40,6 +40,8 @@
 #include "timing.h"
 #include "accel.h"
 
+#include "hardfault.h"
+
 #define TAG "main"
 //  debugging with gdb: ./JLinkGDBServer -if SWD -device nRF51822
 //  ./arm-none-eabi-gdb --tui /home/strauss/munka/ble-decawave/nRF51_SDK_10.0.0_dc26b5e/examples/ble-decawave-tag/ble_app_deca/dev_deca_bt/s110/armgcc/_build/nrf51822_xxac_s110_res.out
@@ -149,10 +151,10 @@ int main(void)
     LOGI(TAG,"device name: %s\n", device_name);
 
     APP_SCHED_INIT(
-                MAX(
+                ENSURE_ALIGN(MAX(
                     sizeof(df_ranging_info_t),
                     sizeof(df_accel_info_t)
-                    ),
+                    ),sizeof(uint32_t)),
                 10);
 
     leds_init();
@@ -191,46 +193,9 @@ int main(void)
 
 }
 
-
-void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
+void HardFault_process(HardFault_stack_t * p_stack)
 {
-    volatile uint32_t r0;
-	volatile uint32_t r1;
-	volatile uint32_t r2;
-	volatile uint32_t r3;
-	volatile uint32_t r12;
-	volatile uint32_t lr;
-	volatile uint32_t pc;
-	volatile uint32_t psr;
-
-	r0 = pulFaultStackAddress[ 0 ];
-	r1 = pulFaultStackAddress[ 1 ];
-	r2 = pulFaultStackAddress[ 2 ];
-	r3 = pulFaultStackAddress[ 3 ];
-
-	r12 = pulFaultStackAddress[ 4 ];
-	lr = pulFaultStackAddress[ 5 ];
-	pc = pulFaultStackAddress[ 6 ];
-    psr = pulFaultStackAddress[ 7 ];
-
     bsp_board_led_on(LED_HARD_FAULT);
-
-	for( ;; );
-}
-
-void HardFault_Handler( void ) __attribute__( ( naked ) );
-void HardFault_Handler(void)
-{
-	__asm volatile
-	(
-		" tst lr, #4                                                \n"
-		" ite eq                                                    \n"
-		" mrseq r0, msp                                             \n"
-		" mrsne r0, psp                                             \n"
-		" ldr r1, [r0, #24]                                         \n"
-		" ldr r2, handler2_address_const                            \n"
-		" bx r2                                                     \n"
-		" handler2_address_const: .word prvGetRegistersFromStack    \n"
-	);
+    for(;;);
 }
 
