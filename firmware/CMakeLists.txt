@@ -46,7 +46,7 @@ SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
     -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
     -Wl,--gc-sections")
 
-add_definitions(-D__HEAP_SIZE=0 -D__STACK_SIZE=8192)
+add_definitions(-D__HEAP_SIZE=0 -D__STACK_SIZE=16384)
 
 
 set(SRCS

@@ -90,7 +90,7 @@
 #define SLAVE_LATENCY                   0                                       /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory time-out (10 ms based). */
 
-#define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(20000)                  /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (15 seconds). */
+#define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(10000)                  /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (15 seconds). */
 #define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000)                   /**< Time between each call to sd_ble_gap_conn_param_update after the first call (5 seconds). */
 #define MAX_CONN_PARAMS_UPDATE_COUNT    3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
 
@@ -178,14 +178,32 @@ static void gap_params_init(const char* device_name)
 }
 
 
+/**@brief Function for handling events from the GATT library. */
+static void gatt_evt_handler(nrf_ble_gatt_t * p_gatt, nrf_ble_gatt_evt_t const * p_evt)
+{
+    switch (p_evt->evt_id)
+    {
+        case NRF_BLE_GATT_EVT_ATT_MTU_UPDATED:
+        {
+            NRF_LOG_INFO("ATT MTU exchange completed. MTU set to %u bytes.",
+                         p_evt->params.att_mtu_effective);
+        } break;
+
+        case NRF_BLE_GATT_EVT_DATA_LENGTH_UPDATED:
+        {
+            NRF_LOG_INFO("Data length updated to %u bytes.", p_evt->params.data_length);
+        } break;
+    }
+}
+
 /**@brief Function for initializing the GATT module.
  */
 static void gatt_init(void)
 {
-    ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, NULL);
+    ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, gatt_evt_handler);
     APP_ERROR_CHECK(err_code);
 
-    //err_code = nrf_ble_gatt_att_mtu_periph_set(&m_gatt, ATT_MTU_SIZE);
+    err_code = nrf_ble_gatt_att_mtu_periph_set(&m_gatt, ATT_MTU_SIZE);
     APP_ERROR_CHECK(err_code);
 }
 
