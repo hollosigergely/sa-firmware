@@ -13,7 +13,7 @@ void my_error_function(int code, const char* filename, const int line);
         } \
     } while(0);
 
-#define ENSURE_ALIGN(A,B) (((A) + (B) - 1) / (B))
+#define ENSURE_ALIGN(A,B) (((A) + (B) - 1) / (B) * (B))
 
 void utils_init();
 
