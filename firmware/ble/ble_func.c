@@ -102,8 +102,6 @@ static_assert(ATT_MTU_SIZE <= NRF_SDH_BLE_GATT_MAX_MTU_SIZE, "Modify max MTU siz
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
 
-BLE_RS_DEF(m_rs);
-BLE_ACCS_DEF(m_accs);
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 
@@ -219,7 +217,10 @@ static void advertising_init(void)
     ble_advdata_t advdata;
     ble_advdata_t srdata;
 
-    ble_uuid_t adv_uuids[] = {{RS_UUID_SERVICE, m_rs.uuid_type}};
+    ble_uuid_t adv_uuids[] = {
+        {RS_UUID_SERVICE, ble_rs_get_uuid_type()},
+        //{ACCS_UUID_SERVICE, ble_accs_get_uuid_type()}
+    };
 
     // Build and set advertising data.
     memset(&advdata, 0, sizeof(advdata));
@@ -302,10 +303,10 @@ static void services_init()
     err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
     APP_ERROR_CHECK(err_code);
 
-    err_code = ble_rs_init(&m_rs);
+    err_code = ble_rs_init();
     APP_ERROR_CHECK(err_code);
 
-    err_code = ble_accs_init(&m_accs);
+    err_code = ble_accs_init();
     APP_ERROR_CHECK(err_code);
 }
 
@@ -494,24 +495,3 @@ int ble_func_init(const char* device_name)
 }
 
 
-/**
- * @}
- */
-
-void ble_func_send_ranging(df_ranging_info_t *ranging)
-{
-    if(m_conn_handle != BLE_CONN_HANDLE_INVALID)
-    {
-        ret_code_t err_code = ble_rs_send_ranging(m_conn_handle, &m_rs, ranging);
-        //ERROR_CHECK(err_code, NRF_SUCCESS);
-    }
-}
-
-void ble_func_send_accel_values(df_accel_info_t *accel_info)
-{
-    if(m_conn_handle != BLE_CONN_HANDLE_INVALID)
-    {
-        ret_code_t err_code = ble_accs_send_values(m_conn_handle, &m_accs, accel_info);
-        //ERROR_CHECK(err_code, NRF_SUCCESS); BLE_ERROR_GATTS_SYS_ATTR_MISSING
-    }
-}

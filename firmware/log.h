@@ -13,19 +13,19 @@
 #ifdef ENABLE_LOG
 #define LOGE(tag,msg,...) { \
       char _out[256]; \
-      sprintf(_out,"[E] " msg, ##__VA_ARGS__); \
+      sprintf(_out,"[E," tag "] " msg, ##__VA_ARGS__); \
       SEGGER_RTT_WriteString(0, _out); \
     }
 
 #define LOGW(tag,msg,...) { \
       char _out[256]; \
-      sprintf(_out,"[W] " msg, ##__VA_ARGS__); \
+      sprintf(_out,"[W," tag "] " msg, ##__VA_ARGS__); \
       SEGGER_RTT_WriteString(0, _out); \
     }
 
 #define LOGI(tag,msg,...) { \
     char _out[256]; \
-    sprintf(_out,"[I] " msg, ##__VA_ARGS__); \
+    sprintf(_out,"[I," tag "] " msg, ##__VA_ARGS__); \
     SEGGER_RTT_WriteString(0, _out); \
   }
 #else

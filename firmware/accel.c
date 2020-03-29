@@ -190,8 +190,6 @@ void accel_init(app_sched_event_handler_t handler)
 
     nrf_gpio_cfg_input(ACCEL_INT_PIN, NRF_GPIO_PIN_PULLUP);
     gpiote_init();
-
-    accel_enable();
 }
 
 

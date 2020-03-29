@@ -16,7 +16,8 @@
 #include "uart.h"
 
 #include "ranging.h"
-#include "ble_func.h"
+#include "accel_service.h"
+#include "ranging_service.h"
 #include "accel.h"
 
 #define TAG "tag"
@@ -195,7 +196,7 @@ static void ranging_sched_handler(void *p_event_data, uint16_t event_size)
         LOGI(TAG, " dist %d: %" PRIu16 "\n", i, ranging->values[i]);
     }
 
-    ble_func_send_ranging((df_ranging_info_t*)p_event_data);
+    ble_rs_send_ranging((df_ranging_info_t*)p_event_data);
 }
 
 
@@ -213,7 +214,7 @@ static void acc_measurement_sched_handler(void * p_event_data, uint16_t event_si
         LOGT(TAG,"Accel: %" PRIi16 ", %" PRIi16 ", %" PRIi16 "\n", x, y, z);
     }
 
-    ble_func_send_accel_values((df_accel_info_t*)p_event_data);
+    ble_accs_send_values((df_accel_info_t*)p_event_data);
 }
 
 
@@ -317,7 +318,49 @@ static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_cont
 		event_handler(EVENT_SF_BEGIN, NULL, 0);
 }
 
+static void start_uwb_comm() {
+    LOGI(TAG,"initialize dw1000 phy\n");
+    dwm1000_phy_init();
+    dwm1000_irq_enable();
 
+
+    dwt_setcallbacks(mac_txok_callback_impl, mac_rxok_callback_impl, NULL, mac_rxerr_callback_impl);
+
+    uint32_t err_code;
+    nrf_drv_timer_config_t timer_cfg = {
+        .frequency          = NRF_TIMER_FREQ_16MHz,
+        .mode               = NRF_TIMER_MODE_TIMER,
+        .bit_width          = NRF_TIMER_BIT_WIDTH_32,
+        .interrupt_priority = 2,
+        .p_context          = NULL
+    };
+    err_code = nrf_drv_timer_init(&m_frame_timer, &timer_cfg, frame_timer_event_handler);
+    APP_ERROR_CHECK(err_code);
+    nrf_drv_timer_enable(&m_frame_timer);
+    nrf_drv_timer_pause(&m_frame_timer);
+
+    restart_frame_timer();
+
+    dwt_rxenable(0);
+}
+
+static void ble_accs_status_callback(bool enabled)
+{
+    LOGI(TAG,"accel status: %d\n", enabled);
+    if(enabled)
+    {
+        accel_enable();
+    }
+    else
+    {
+        accel_disable();
+    }
+}
+
+static void ble_rs_mode_callback(tag_mode_t mode)
+{
+    LOGI(TAG,"tag mode: 0x%02X\n", mode);
+}
 
 
 int impl_tag_init()
@@ -343,34 +386,12 @@ int impl_tag_init()
     //NRF_CLOCK->TASKS_HFCLKSTART = 1;
 
     ranging_init(m_tag_id);
-
-
     uart_init();
+
     accel_init(acc_measurement_sched_handler);
 
-    uart_puts("start\n");
-    LOGI(TAG,"initialize dw1000 phy\n");
-    dwm1000_phy_init();
-    dwm1000_irq_enable();
-
-    dwt_setcallbacks(mac_txok_callback_impl, mac_rxok_callback_impl, NULL, mac_rxerr_callback_impl);
-
-    uint32_t err_code;
-    nrf_drv_timer_config_t timer_cfg = {
-        .frequency          = NRF_TIMER_FREQ_16MHz,
-        .mode               = NRF_TIMER_MODE_TIMER,
-        .bit_width          = NRF_TIMER_BIT_WIDTH_32,
-        .interrupt_priority = 2,
-        .p_context          = NULL
-    };
-    err_code = nrf_drv_timer_init(&m_frame_timer, &timer_cfg, frame_timer_event_handler);
-    APP_ERROR_CHECK(err_code);
-    nrf_drv_timer_enable(&m_frame_timer);
-    nrf_drv_timer_pause(&m_frame_timer);
-
-    restart_frame_timer();
-
-    dwt_rxenable(0);
+    ble_accs_set_status_callback(ble_accs_status_callback);
+    ble_rs_set_tag_mode_callback(ble_rs_mode_callback);
 
 	return 0;
 }
