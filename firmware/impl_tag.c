@@ -47,6 +47,7 @@ static uint8_t					m_rx_buffer[SF_MAX_MESSAGE_SIZE];
 static uint8_t					m_received_sync_messages_count = 0;
 static uint8_t					m_unsynced_sf_count = 0;
 static uint16_t                 m_superframe_ts = 0;
+static uint8_t                  m_tag_mode = TAG_MODE_POWERDOWN;
 
 static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context);
 static void restart_frame_timer();
@@ -323,7 +324,6 @@ static void start_uwb_comm() {
     dwm1000_phy_init();
     dwm1000_irq_enable();
 
-
     dwt_setcallbacks(mac_txok_callback_impl, mac_rxok_callback_impl, NULL, mac_rxerr_callback_impl);
 
     uint32_t err_code;
@@ -339,9 +339,23 @@ static void start_uwb_comm() {
     nrf_drv_timer_enable(&m_frame_timer);
     nrf_drv_timer_pause(&m_frame_timer);
 
+    set_tag_state(TAG_STATE__DISCOVERY);
+
     restart_frame_timer();
 
     dwt_rxenable(0);
+}
+
+static void stop_uwb_comm() {
+    LOGI(TAG,"deinit dw1000 phy\n");
+
+    dwt_forcetrxoff();
+
+    nrf_drv_timer_disable(&m_frame_timer);
+    nrf_drv_timer_uninit(&m_frame_timer);
+
+    dwm1000_irq_disable();
+    dwm1000_phy_release();
 }
 
 static void ble_accs_status_callback(bool enabled)
@@ -360,6 +374,25 @@ static void ble_accs_status_callback(bool enabled)
 static void ble_rs_mode_callback(tag_mode_t mode)
 {
     LOGI(TAG,"tag mode: 0x%02X\n", mode);
+
+    if(mode == m_tag_mode)
+    {
+        return;
+    }
+
+    if(m_tag_mode == TAG_MODE_POWERDOWN &&
+            (mode == TAG_MODE_TAG_RANGING || mode == TAG_MODE_ANCHOR_RANGING))
+    {
+        start_uwb_comm();
+    }
+
+    if((m_tag_mode == TAG_MODE_TAG_RANGING || m_tag_mode == TAG_MODE_ANCHOR_RANGING) &&
+            mode == TAG_MODE_POWERDOWN)
+    {
+        stop_uwb_comm();
+    }
+
+    m_tag_mode = mode;
 }
 
 

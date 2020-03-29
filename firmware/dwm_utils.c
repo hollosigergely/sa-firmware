@@ -325,6 +325,7 @@ void dwm1000_irq_enable()
 void dwm1000_irq_disable()
 {
     nrf_drv_gpiote_in_event_disable(DW1000_IRQ);
+    nrf_drv_gpiote_in_uninit(DW1000_IRQ);
 }
 
 void dwm1000_phy_release()
