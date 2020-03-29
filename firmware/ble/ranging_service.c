@@ -20,6 +20,8 @@ uint32_t ble_rs_init()
 
     m_device_info.group_id = addr_handler_get_group_id();
     m_device_info.dev_id = addr_handler_get_virtual_addr();
+    m_device_info.anchor_count = TIMING_ANCHOR_COUNT;
+    m_device_info.tag_count = TIMING_TAG_COUNT;
 
     uint32_t              err_code;
     ble_uuid_t            ble_uuid;
@@ -62,6 +64,7 @@ uint32_t ble_rs_init()
     add_char_params.uuid_type         = p_rs->uuid_type;
     add_char_params.init_len          = sizeof(uint16_t);
     add_char_params.max_len           = MAX(sizeof(df_ranging_info_t),sizeof(df_anchor_rx_info_t));
+    add_char_params.is_var_len        = true;
     add_char_params.char_props.read   = 1;
     add_char_params.char_props.notify = 1;
 

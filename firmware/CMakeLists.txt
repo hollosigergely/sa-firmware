@@ -63,6 +63,7 @@ set(SRCS
       ${PROJECT_SOURCE_DIR}/utils.c
       ${PROJECT_SOURCE_DIR}/timing.c
       ${PROJECT_SOURCE_DIR}/ranging.c
+      ${PROJECT_SOURCE_DIR}/ranging_anchor.c
       ${PROJECT_SOURCE_DIR}/accel.c
       ${PROJECT_SOURCE_DIR}/data_format.c
       ${PROJECT_SOURCE_DIR}/ble/ble_func.c

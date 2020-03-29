@@ -29,5 +29,8 @@ typedef struct {
 typedef struct {
     uint16_t                group_id;
     uint16_t                dev_id;
+
+    uint16_t                 anchor_count;
+    uint16_t                 tag_count;
 } df_device_info_t;
 #endif // DATA_FORMAT_H

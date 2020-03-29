@@ -16,6 +16,7 @@
 #include "uart.h"
 
 #include "ranging.h"
+#include "ranging_anchor.h"
 #include "accel_service.h"
 #include "ranging_service.h"
 #include "accel.h"
@@ -48,6 +49,8 @@ static uint8_t					m_received_sync_messages_count = 0;
 static uint8_t					m_unsynced_sf_count = 0;
 static uint16_t                 m_superframe_ts = 0;
 static uint8_t                  m_tag_mode = TAG_MODE_POWERDOWN;
+static uint32_t                 m_err_counter = 0;
+static uint32_t                 m_all_counter = 0;
 
 static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context);
 static void restart_frame_timer();
@@ -197,10 +200,12 @@ static void tag_ranging_sched_handler(void *p_event_data, uint16_t event_size)
         LOGI(TAG, " dist %d: %" PRIu16 "\n", i, ranging->values[i]);
     }
 
+    m_all_counter++;
     uint32_t err_code = ble_rs_send_ranging((df_ranging_info_t*)p_event_data);
     if(err_code == NRF_ERROR_RESOURCES)
     {
-        APP_ERROR_CHECK(NRF_ERROR_RESOURCES);
+        m_err_counter++;
+        LOGI(TAG, "err: %" PRIu32 "/%" PRIu32 "\n", m_err_counter, m_all_counter);
     }
 }
 
@@ -208,10 +213,12 @@ static void anchor_ranging_sched_handler(void *p_event_data, uint16_t event_size
 {
     df_anchor_rx_info_t* rx_info = (df_anchor_rx_info_t*)p_event_data;
 
+    m_all_counter++;
     uint32_t err_code = ble_rs_send_anchor_rx_info(rx_info);
     if(err_code == NRF_ERROR_RESOURCES)
     {
-        APP_ERROR_CHECK(NRF_ERROR_RESOURCES);
+        m_err_counter++;
+        LOGI(TAG, "err: %" PRIu32 "/%" PRIu32 "\n", m_err_counter, m_all_counter);
     }
 }
 
@@ -246,9 +253,14 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 
 		m_received_sync_messages_count = 0;
 
-        if(m_tag_mode == TAG_MODE_TAG_RANGING)
+        switch(m_tag_mode)
         {
+        case TAG_MODE_TAG_RANGING:
             ranging_on_new_superframe();
+            break;
+        case TAG_MODE_ANCHOR_RANGING:
+            ranging_anchor_on_new_superframe();
+            break;
         }
 	}
 
@@ -305,15 +317,7 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
                     ranging_on_anchor_rx(rx_ts, msg);
                     break;
                 case TAG_MODE_ANCHOR_RANGING:
-                    {
-                        df_anchor_rx_info_t rx_info;
-                        rx_info.anchor_id = msg->hdr.src_id;
-                        rx_info.tr_id = msg->tr_id;
-                        memcpy(&rx_info.msg_tx_ts, msg->tx_ts, sizeof(rx_info_t));
-                        memcpy(&rx_info.msg_rx_ts, msg->anchors, TIMING_ANCHOR_COUNT * sizeof(rx_info_t));
-
-                        app_sched_event_put(&rx_info, sizeof(df_anchor_rx_info_t), anchor_ranging_sched_handler);
-                    }
+                    ranging_anchor_on_anchor_rx(rx_ts, msg);
                     break;
                 }
 			}
@@ -457,6 +461,8 @@ int impl_tag_init()
     //NRF_CLOCK->TASKS_HFCLKSTART = 1;
 
     ranging_init(m_tag_id);
+    ranging_anchor_init();
+
     uart_init();
 
     accel_init(acc_measurement_sched_handler);

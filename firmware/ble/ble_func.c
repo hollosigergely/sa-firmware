@@ -85,8 +85,8 @@
 #define APP_ADV_DURATION                BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
 
 
-#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (1.25 ms based). */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(TIMING_SUPERFRAME_LENGTH_MS, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (1.25 ms based). */
+#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(7.5, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (1.25 ms based). */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(7.5, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (1.25 ms based). */
 #define SLAVE_LATENCY                   0                                       /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory time-out (10 ms based). */
 
@@ -96,7 +96,8 @@
 
 #define ATT_MTU_SIZE                    65
 static_assert((sizeof(df_accel_info_t) <= (ATT_MTU_SIZE - 3)) &&
-                (sizeof(df_ranging_info_t) <= (ATT_MTU_SIZE - 3)), "Watch out for ATT_MTU size!");
+                (sizeof(df_ranging_info_t) <= (ATT_MTU_SIZE - 3)) &&
+                (sizeof(df_anchor_rx_info_t) <= (ATT_MTU_SIZE - 3)), "Watch out for ATT_MTU size!");
 static_assert(ATT_MTU_SIZE <= NRF_SDH_BLE_GATT_MAX_MTU_SIZE, "Modify max MTU size!");
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
@@ -491,6 +492,14 @@ int ble_func_init(const char* device_name)
     conn_params_init();
 
     advertising_start();
+
+    ble_opt_t  opt;
+
+    memset(&opt, 0x00, sizeof(opt));
+    opt.common_opt.conn_evt_ext.enable = 1;
+
+    uint32_t err_code = sd_ble_opt_set(BLE_COMMON_OPT_CONN_EVT_EXT, &opt);
+    APP_ERROR_CHECK(err_code);
 
     return NRF_SUCCESS;
 }
