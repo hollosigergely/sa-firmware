@@ -61,7 +61,7 @@ uint32_t ble_rs_init()
     add_char_params.uuid              = RS_UUID_RANGING_CHAR;
     add_char_params.uuid_type         = p_rs->uuid_type;
     add_char_params.init_len          = sizeof(uint16_t);
-    add_char_params.max_len           = sizeof(df_ranging_info_t);
+    add_char_params.max_len           = MAX(sizeof(df_ranging_info_t),sizeof(df_anchor_rx_info_t));
     add_char_params.char_props.read   = 1;
     add_char_params.char_props.notify = 1;
 
@@ -143,6 +143,27 @@ uint32_t ble_rs_send_ranging(df_ranging_info_t *ranging_data)
     {
         ble_gatts_hvx_params_t params;
         uint16_t len = sizeof(df_ranging_info_t);
+
+        memset(&params, 0, sizeof(params));
+        params.type   = BLE_GATT_HVX_NOTIFICATION;
+        params.handle = m_rs.ranging_char_handles.value_handle;
+        params.p_data = (uint8_t*)ranging_data;
+        params.p_len  = &len;
+
+        return sd_ble_gatts_hvx(m_conn_handle, &params);
+    }
+    else
+    {
+        return NRF_SUCCESS;
+    }
+}
+
+uint32_t ble_rs_send_anchor_rx_info(df_anchor_rx_info_t *ranging_data)
+{
+    if(m_conn_handle != BLE_CONN_HANDLE_INVALID)
+    {
+        ble_gatts_hvx_params_t params;
+        uint16_t len = sizeof(df_anchor_rx_info_t);
 
         memset(&params, 0, sizeof(params));
         params.type   = BLE_GATT_HVX_NOTIFICATION;

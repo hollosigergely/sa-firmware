@@ -151,10 +151,11 @@ int main(void)
     LOGI(TAG,"device name: %s\n", device_name);
 
     APP_SCHED_INIT(
-                ENSURE_ALIGN(MAX(
+                ENSURE_ALIGN(MAX(MAX(
                     sizeof(df_ranging_info_t),
                     sizeof(df_accel_info_t)
-                    ),sizeof(uint32_t)),
+                    ),
+                    sizeof(df_anchor_rx_info_t)),sizeof(uint32_t)),
                 10);
 
     leds_init();

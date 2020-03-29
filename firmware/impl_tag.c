@@ -186,7 +186,7 @@ static void transmit_tag_msg() {
     ranging_on_tag_tx(tx_ts);
 }
 
-static void ranging_sched_handler(void *p_event_data, uint16_t event_size)
+static void tag_ranging_sched_handler(void *p_event_data, uint16_t event_size)
 {
     LOGI(TAG, "sending ranging (%d)\n", event_size);
 
@@ -197,9 +197,23 @@ static void ranging_sched_handler(void *p_event_data, uint16_t event_size)
         LOGI(TAG, " dist %d: %" PRIu16 "\n", i, ranging->values[i]);
     }
 
-    ble_rs_send_ranging((df_ranging_info_t*)p_event_data);
+    uint32_t err_code = ble_rs_send_ranging((df_ranging_info_t*)p_event_data);
+    if(err_code == NRF_ERROR_RESOURCES)
+    {
+        APP_ERROR_CHECK(NRF_ERROR_RESOURCES);
+    }
 }
 
+static void anchor_ranging_sched_handler(void *p_event_data, uint16_t event_size)
+{
+    df_anchor_rx_info_t* rx_info = (df_anchor_rx_info_t*)p_event_data;
+
+    uint32_t err_code = ble_rs_send_anchor_rx_info(rx_info);
+    if(err_code == NRF_ERROR_RESOURCES)
+    {
+        APP_ERROR_CHECK(NRF_ERROR_RESOURCES);
+    }
+}
 
 static void acc_measurement_sched_handler(void * p_event_data, uint16_t event_size)
 {
@@ -231,7 +245,11 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 		LOGT(TAG, "SF\n");
 
 		m_received_sync_messages_count = 0;
-        ranging_on_new_superframe();
+
+        if(m_tag_mode == TAG_MODE_TAG_RANGING)
+        {
+            ranging_on_new_superframe();
+        }
 	}
 
 	if(m_tag_state == TAG_STATE__DISCOVERY)
@@ -280,7 +298,24 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 				m_received_sync_messages_count++;
 				m_unsynced_sf_count = 0;
                 log_anchor_message(msg,rx_ts.ts);
-                ranging_on_anchor_rx(rx_ts, msg);
+
+                switch(m_tag_mode)
+                {
+                case TAG_MODE_TAG_RANGING:
+                    ranging_on_anchor_rx(rx_ts, msg);
+                    break;
+                case TAG_MODE_ANCHOR_RANGING:
+                    {
+                        df_anchor_rx_info_t rx_info;
+                        rx_info.anchor_id = msg->hdr.src_id;
+                        rx_info.tr_id = msg->tr_id;
+                        memcpy(&rx_info.msg_tx_ts, msg->tx_ts, sizeof(rx_info_t));
+                        memcpy(&rx_info.msg_rx_ts, msg->anchors, TIMING_ANCHOR_COUNT * sizeof(rx_info_t));
+
+                        app_sched_event_put(&rx_info, sizeof(df_anchor_rx_info_t), anchor_ranging_sched_handler);
+                    }
+                    break;
+                }
 			}
 		}
 		else if(event_type == EVENT_TIMER)
@@ -302,11 +337,14 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 
 			transmit_tag_msg();
 
-            df_ranging_info_t ranging_info;
-            ranging_info.ts = m_superframe_ts;
-            memcpy(ranging_info.values, ranging_get_distances(), TIMING_ANCHOR_COUNT * sizeof(uint16_t));
+            if(m_tag_mode == TAG_MODE_TAG_RANGING)
+            {
+                df_ranging_info_t ranging_info;
+                ranging_info.ts = m_superframe_ts;
+                memcpy(ranging_info.values, ranging_get_distances(), TIMING_ANCHOR_COUNT * sizeof(uint16_t));
 
-            app_sched_event_put(&ranging_info, sizeof(df_ranging_info_t), ranging_sched_handler);
+                app_sched_event_put(&ranging_info, sizeof(df_ranging_info_t), tag_ranging_sched_handler);
+            }
 		}
 	}
 }
