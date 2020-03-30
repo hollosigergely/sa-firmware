@@ -3,6 +3,7 @@
  * @brief Főfunkciókat tartalmazó fájl
  */
 #include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -142,13 +143,7 @@ int main(void)
     LOGI(TAG,"--> start app <--\n");
 
 	nrf_delay_ms(50);
-
-	uint64_t chipID = addr_handler_get_chip_id();
-	LOGI(TAG,"Chip id: %llu\n", chipID);
-
-    char device_name[26];
-    addr_handler_get_device_name(device_name);
-    LOGI(TAG,"device name: %s\n", device_name);
+    addr_handler_init();
 
     APP_SCHED_INIT(
                 ENSURE_ALIGN(MAX(MAX(
@@ -174,7 +169,7 @@ int main(void)
             ERROR_CHECK(err_code, NRF_SUCCESS);
 
             sd_clock_hfclk_request();
-            ble_func_init(device_name);
+            ble_func_init(addr_handler_get_device_name());
 
             impl_tag_init();
         }

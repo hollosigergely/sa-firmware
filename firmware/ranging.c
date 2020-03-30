@@ -11,6 +11,8 @@
 #define TX_ANT_DLY                                              ANT_DLY_CH1             //16620 //16436 /* Default antenna delay values for 64 MHz PRF */
 #define RX_ANT_DLY                                              ANT_DLY_CH1
 
+#define CORRECT_CLOCK_DIFF(x)   x = ((x) < 0)?((x) + (1ll << 40)):(x)
+
 typedef struct {
     dwm1000_ts_t        anchor_msg_tx_ts;
     dwm1000_ts_t        anchor_msg_rx_ts;
@@ -27,10 +29,22 @@ static uint16_t                     m_tag_virtual_addr;
 
 static uint16_t do_ranging(dwm1000_ts_t ts1, dwm1000_ts_t ts2, dwm1000_ts_t ts3, dwm1000_ts_t ts4, dwm1000_ts_t ts5, dwm1000_ts_t ts6)
 {
+#if TIMING_SUPERFRAME_LENGTH_MS < 60
     uint32_t Tround1 = ts4.ts_low_32 - ts1.ts_low_32;
     uint32_t Tround2 = ts6.ts_low_32 - ts3.ts_low_32;
     uint32_t Treply2 = ts5.ts_low_32 - ts4.ts_low_32;
     uint32_t Treply1 = ts3.ts_low_32 - ts2.ts_low_32;
+#else
+    int64_t Tround1 = ts4.ts - ts1.ts;
+    int64_t Tround2 = ts6.ts - ts3.ts;
+    int64_t Treply2 = ts5.ts - ts4.ts;
+    int64_t Treply1 = ts3.ts - ts2.ts;
+
+    CORRECT_CLOCK_DIFF(Tround1);
+    CORRECT_CLOCK_DIFF(Tround2);
+    CORRECT_CLOCK_DIFF(Treply1);
+    CORRECT_CLOCK_DIFF(Treply2);
+#endif
 
     double Ra = Tround1 - RX_ANT_DLY - TX_ANT_DLY;
     double Rb = Tround2 - RX_ANT_DLY - TX_ANT_DLY;

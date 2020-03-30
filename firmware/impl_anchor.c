@@ -37,7 +37,6 @@ const static nrf_drv_timer_t	m_frame_timer = NRF_DRV_TIMER_INSTANCE(1);
 static int32_t					m_frame_timer_compensation_us = 0;
 static anchor_state_t			m_anchor_state = ANCHOR_STATE__DISCOVERY;
 static uint16_t					m_anchor_id = 1;
-static uint16_t					m_anchor_addr = 0;
 static uint8_t					m_superframe_id = 0;
 static uint8_t					m_rx_buffer[SF_MAX_MESSAGE_SIZE];
 static rx_info_t				m_tag_infos[TIMING_TAG_COUNT];
@@ -286,7 +285,6 @@ static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_cont
 
 int impl_anchor_init()
 {
-	m_anchor_addr = addr_handler_get();
 	m_anchor_id = addr_handler_get_virtual_addr();
 	if(m_anchor_id == 0xFFFF)
 	{
@@ -296,8 +294,7 @@ int impl_anchor_init()
 
 	if(m_anchor_id >= TIMING_ANCHOR_COUNT)
 	{
-		LOGE(TAG, "anchor count reached\n");
-		for(;;);
+        ERROR(TAG, "anchor count reached\n");
 	}
 
 	LOGI(TAG,"mode: anchor\n");

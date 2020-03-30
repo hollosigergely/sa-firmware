@@ -5,9 +5,9 @@
 
 #define TIMING_DISCOVERY_SUPERFRAME_COUNT   5
 
-#define TIMING_ANCHOR_COUNT             7
-#define TIMING_TAG_COUNT                1
-#define TIMING_ANCHOR_NCOMB2            21
+#define TIMING_ANCHOR_COUNT             8
+#define TIMING_TAG_COUNT                12
+#define TIMING_ANCHOR_NCOMB2            28
 
 #define TIMING_ANCHOR_MESSAGE_LENGTH_US                       5000
 #define TIMING_MESSAGE_TX_PREFIX_TIME_US                      (1051 + 400)          // RMARKER delay + DW1000 comm delay
@@ -25,6 +25,7 @@ typedef struct
 {
     uint8_t          fctrl;
     uint8_t          padding;
+    uint16_t         group_id;
     uint16_t         src_id;
 } __attribute__((packed)) sf_header_t;
 

@@ -443,8 +443,7 @@ int impl_tag_init()
 
 	if(m_tag_id >= TIMING_TAG_COUNT)
 	{
-		LOGE(TAG, "tag count reached\n");
-		for(;;);
+        ERROR(TAG, "tag count reached\n");
 	}
 
 	LOGI(TAG,"mode: tag\n");
