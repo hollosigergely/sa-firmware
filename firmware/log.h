@@ -2,6 +2,9 @@
 #define LOG_H
 
 #include "SEGGER_RTT.h"
+#include "nrf_assert.h"
+
+#define assert ASSERT
 
 #define LOGTS(anchor,trid,tsid,ts) { \
 	  char _out[256]; \

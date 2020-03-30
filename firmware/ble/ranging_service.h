@@ -36,8 +36,9 @@ struct ble_rs_s
 
 uint32_t ble_rs_init();
 uint32_t ble_rs_send_ranging(df_ranging_info_t* ranging_data);
-uint32_t ble_rs_send_anchor_rx_info(df_anchor_rx_info_t *ranging_data);
+uint32_t ble_rs_send_anchor_ranging_info(df_anchor_ranging_info_t *ranging_data);
 uint8_t  ble_rs_get_uuid_type();
 void     ble_rs_set_tag_mode_callback(ble_rs_tag_mode_callback_t cb);
+df_device_info_t* ble_rs_get_device_info();
 
 #endif // RANGING_SERVICE_H

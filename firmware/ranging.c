@@ -38,7 +38,7 @@ static uint16_t do_ranging(dwm1000_ts_t ts1, dwm1000_ts_t ts2, dwm1000_ts_t ts3,
     double Db = Treply1 + TX_ANT_DLY + RX_ANT_DLY;
 
     double tof_dtu = ((Ra * Rb - Da * Db) / (Ra + Rb + Da + Db));
-    double tof = tof_dtu * DWT_TIME_UNITS;
+    double tof = tof_dtu * (double)DWT_TIME_UNITS;
     double distance = tof * SPEED_OF_LIGHT;
 
     return distance * 1000;

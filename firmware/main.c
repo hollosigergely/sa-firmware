@@ -155,7 +155,7 @@ int main(void)
                     sizeof(df_ranging_info_t),
                     sizeof(df_accel_info_t)
                     ),
-                    sizeof(df_anchor_rx_info_t)),sizeof(uint32_t)),
+                    sizeof(df_anchor_ranging_info_t)),sizeof(uint32_t)),
                 10);
 
     leds_init();

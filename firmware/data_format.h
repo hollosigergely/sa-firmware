@@ -9,22 +9,20 @@ typedef struct
 {
     uint16_t        ts;
     uint16_t        values[TIMING_ANCHOR_COUNT];
-} df_ranging_info_t;
+} __attribute__((packed)) df_ranging_info_t;
 
 typedef struct
 {
-    uint16_t        anchor_id;
-    uint8_t         tr_id;
-    rx_info_t       msg_tx_ts;
-    rx_info_t       msg_rx_ts[TIMING_ANCHOR_COUNT];
-} __attribute__((packed)) df_anchor_rx_info_t;
+    uint16_t        ts;
+    uint16_t        values[TIMING_ANCHOR_NCOMB2];
+} __attribute__((packed)) df_anchor_ranging_info_t;
 
 #define ACCEL_FIFO_BURST_SIZE             10
 
 typedef struct {
     uint16_t                ts;
     lis2dh12_data_t         values[ACCEL_FIFO_BURST_SIZE];
-} df_accel_info_t;
+} __attribute__((packed)) df_accel_info_t;
 
 typedef struct {
     uint16_t                group_id;
@@ -32,5 +30,8 @@ typedef struct {
 
     uint16_t                 anchor_count;
     uint16_t                 tag_count;
-} df_device_info_t;
+
+    uint32_t                failed_notification_count;
+    uint32_t                notification_count;
+} __attribute__((packed)) df_device_info_t;
 #endif // DATA_FORMAT_H
