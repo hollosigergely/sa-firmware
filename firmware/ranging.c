@@ -29,6 +29,13 @@ static uint16_t                     m_tag_virtual_addr;
 
 static uint16_t do_ranging(dwm1000_ts_t ts1, dwm1000_ts_t ts2, dwm1000_ts_t ts3, dwm1000_ts_t ts4, dwm1000_ts_t ts5, dwm1000_ts_t ts6)
 {
+//    LOGI(TAG,"ts1 = %" PRIx64 "\n", ts1);
+//    LOGI(TAG,"ts2 = %" PRIx64 "\n", ts2);
+//    LOGI(TAG,"ts3 = %" PRIx64 "\n", ts3);
+//    LOGI(TAG,"ts4 = %" PRIx64 "\n", ts4);
+//    LOGI(TAG,"ts5 = %" PRIx64 "\n", ts5);
+//    LOGI(TAG,"ts6 = %" PRIx64 "\n", ts6);
+
 #if TIMING_SUPERFRAME_LENGTH_MS < 60
     uint32_t Tround1 = ts4.ts_low_32 - ts1.ts_low_32;
     uint32_t Tround2 = ts6.ts_low_32 - ts3.ts_low_32;
@@ -46,14 +53,14 @@ static uint16_t do_ranging(dwm1000_ts_t ts1, dwm1000_ts_t ts2, dwm1000_ts_t ts3,
     CORRECT_CLOCK_DIFF(Treply2);
 #endif
 
-    double Ra = Tround1 - RX_ANT_DLY - TX_ANT_DLY;
-    double Rb = Tround2 - RX_ANT_DLY - TX_ANT_DLY;
-    double Da = Treply2 + TX_ANT_DLY + RX_ANT_DLY;
-    double Db = Treply1 + TX_ANT_DLY + RX_ANT_DLY;
+    int64_t Ra = Tround1 - RX_ANT_DLY - TX_ANT_DLY;
+    int64_t Rb = Tround2 - RX_ANT_DLY - TX_ANT_DLY;
+    int64_t Da = Treply2 + TX_ANT_DLY + RX_ANT_DLY;
+    int64_t Db = Treply1 + TX_ANT_DLY + RX_ANT_DLY;
 
-    double tof_dtu = ((Ra * Rb - Da * Db) / (Ra + Rb + Da + Db));
-    double tof = tof_dtu * (double)DWT_TIME_UNITS;
-    double distance = tof * SPEED_OF_LIGHT;
+    float tof_dtu = ((Ra * Rb - Da * Db) / (float)(Ra + Rb + Da + Db));
+    float tof = tof_dtu * (float)DWT_TIME_UNITS;
+    float distance = tof * SPEED_OF_LIGHT;
 
     return distance * 1000;
 }

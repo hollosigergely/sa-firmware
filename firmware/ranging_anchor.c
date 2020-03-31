@@ -50,14 +50,14 @@ static uint16_t do_ranging(dwm1000_ts_t ts1, dwm1000_ts_t ts2, dwm1000_ts_t ts3,
     CORRECT_CLOCK_DIFF(Treply2);
 #endif
 
-    double Ra = Tround1 - RX_ANT_DLY - TX_ANT_DLY;
-    double Rb = Tround2 - RX_ANT_DLY - TX_ANT_DLY;
-    double Da = Treply2 + TX_ANT_DLY + RX_ANT_DLY;
-    double Db = Treply1 + TX_ANT_DLY + RX_ANT_DLY;
+    int64_t Ra = Tround1 - RX_ANT_DLY - TX_ANT_DLY;
+    int64_t Rb = Tround2 - RX_ANT_DLY - TX_ANT_DLY;
+    int64_t Da = Treply2 + TX_ANT_DLY + RX_ANT_DLY;
+    int64_t Db = Treply1 + TX_ANT_DLY + RX_ANT_DLY;
 
-    double tof_dtu = ((Ra * Rb - Da * Db) / (Ra + Rb + Da + Db));
-    double tof = tof_dtu * (double)DWT_TIME_UNITS;
-    double distance = tof * SPEED_OF_LIGHT;
+    float tof_dtu = ((Ra * Rb - Da * Db) / (float)(Ra + Rb + Da + Db));
+    float tof = tof_dtu * (float)DWT_TIME_UNITS;
+    float distance = tof * SPEED_OF_LIGHT;
 
     return distance * 1000;
 }
