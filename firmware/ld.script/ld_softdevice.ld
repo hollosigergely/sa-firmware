@@ -7,10 +7,15 @@ MEMORY
 {
   FLASH (rx) : ORIGIN = 0x26000, LENGTH = 0x5a000
   RAM (rwx) :  ORIGIN = 0x20002498, LENGTH = 0xdb68
+  UICR (r) : ORIGIN = 0x10001080, LENGTH = 0x4
 }
 
 SECTIONS
 {
+  .uicr_customer (NOLOAD) : 
+  {
+    KEEP(*(.uicr_customer))
+  } > UICR
 }
 
 SECTIONS

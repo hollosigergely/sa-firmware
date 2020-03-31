@@ -1,0 +1,37 @@
+#!/bin/bash
+
+if [ "$#" -ne 3 ]; then
+    echo "Usage: $0 <is_anchor: 0|1> <device_id> <group_id>"
+    echo "Example: $0 1 0001 BABA"
+    exit 1
+fi
+
+IS_ANCHOR=$((16#$1))
+DEVICE_ID=$((16#$2))
+GROUP_ID=$((16#$3))
+
+if [ -z "$IS_ANCHOR" ] || [ -z "$DEVICE_ID" ] || [ -z "$GROUP_ID" ]; then
+   echo "Invalid inputs, wrong format!"
+   exit 1
+fi
+
+WORD=$(( $DEVICE_ID << 16 | $GROUP_ID ))
+if [ "$IS_ANCHOR" -eq "0" ]; then
+   printf "\e[1mtag mode   0x%04X    0x%04X\n\e[0m" $DEVICE_ID $GROUP_ID
+else
+   WORD=$(( WORD | 0x80000000 ))
+   printf "\e[1manchor mode   0x%04X    0x%04X\n\e[0m" $DEVICE_ID $GROUP_ID
+fi
+echo
+
+MAC_LOW=`nrfjprog -f nrf52 --memrd 0x100000A4 | cut -d ' ' -f 2`
+MAC_HIGH=`nrfjprog -f nrf52 --memrd 0x100000A8 | cut -d ' ' -f 2`
+MAC=$(( ((16#$MAC_HIGH & 0x0000FFFF) | 0xC000) << 32 | 16#$MAC_LOW ))
+printf "MAC address: 0x%012X\n" $MAC
+
+printf "Writing word: 0x%08X\n" $WORD
+nrfjprog -f nrf52 --eraseuicr
+nrfjprog -f nrf52 --memwr 0x10001080 --val `printf "0x%08X" $WORD`
+
+
+

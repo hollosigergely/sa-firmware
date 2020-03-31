@@ -296,7 +296,3 @@ add_custom_target(flash_softdevice
 add_custom_target(gdbs
    COMMENT "Use 'netcat localhost 19021'"
    COMMAND JLinkGDBServer -if SWD -device nRF52)
-
-add_custom_target(addr
-   COMMENT "MAC address"
-   COMMAND JLinkExe -if SWD -device nRF52 -autoconnect 1 -speed 3000 -CommandFile ${PROJECT_SOURCE_DIR}/JLinkCmd | grep 100000A4)
