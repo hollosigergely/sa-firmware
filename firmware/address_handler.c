@@ -29,6 +29,11 @@ void addr_handler_init() {
     LOGI(TAG,"MAC addr: 0x%" PRIX64 "\n", m_mac_address);
     LOGT(TAG, "UICR: 0x%08X\n", *((uint32_t*)&m_uicr_data));
 
+	if(*(uint32_t*)&m_uicr_data == 0xFFFFFFFF)
+	{
+		ERROR(TAG,"No address specified (uicr is uninitialized).\n");
+	}
+
     m_virtual_address = m_uicr_data.device_id;
     m_is_anchor = m_uicr_data.is_anchor;
     m_group_id = m_uicr_data.group_id;
@@ -44,11 +49,6 @@ void addr_handler_init() {
 
     LOGI(TAG, "device: %s\n", m_device_name);
     LOGI(TAG, "group: 0x%04X\n", addr_handler_get_group_id());
-
-    if(m_uicr_data.group_id == 0)
-    {
-        ERROR(TAG,"No address specified (group_id == 0).\n");
-    }
 }
 
 uint64_t addr_handler_get_mac_addr() {
