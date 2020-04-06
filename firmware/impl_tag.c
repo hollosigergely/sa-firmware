@@ -131,17 +131,17 @@ static void compensate_frame_timer(uint32_t c)
 static void log_anchor_message(sf_anchor_msg_t* msg, uint64_t rx_ts)
 {
 	char s[40];
-    sprintf(s, "1 %d %ld 0x%02x%02x%02x%02x%02x\n", msg->hdr.src_id, m_superframe_counter, msg->tx_ts[4], msg->tx_ts[3], msg->tx_ts[2], msg->tx_ts[1], msg->tx_ts[0]);
-	uart_puts(s);
-    sprintf(s, "2 %d %ld 0x%"PRIx64"\n", msg->hdr.src_id, m_superframe_counter, rx_ts);
-	uart_puts(s);
+    sprintf(s, "1 00 %02d %06ld 0x%02x%02x%02x%02x%02x\n", msg->hdr.src_id, m_superframe_counter, msg->tx_ts[4], msg->tx_ts[3], msg->tx_ts[2], msg->tx_ts[1], msg->tx_ts[0]);
+    uart_puts(s);
+    sprintf(s, "2 00 %02d %06ld 0x%010"PRIx64"\n", msg->hdr.src_id, m_superframe_counter, rx_ts);
+    uart_puts(s);
 
 	for(int i = 0; i < TIMING_TAG_COUNT; i++)
 	{
 		if((msg->tags[i].rx_ts[4] | msg->tags[i].rx_ts[3] | msg->tags[i].rx_ts[2] | msg->tags[i].rx_ts[1] | msg->tags[i].rx_ts[0]) != 0)
 		{
-            sprintf(s, "4 %d %d %ld 0x%02x%02x%02x%02x%02x\n", msg->hdr.src_id,i, m_superframe_counter, msg->tags[i].rx_ts[4], msg->tags[i].rx_ts[3], msg->tags[i].rx_ts[2], msg->tags[i].rx_ts[1], msg->tags[i].rx_ts[0]);
-			uart_puts(s);
+            sprintf(s, "4 %02d %02d %06ld 0x%02x%02x%02x%02x%02x\n", msg->hdr.src_id,i, m_superframe_counter, msg->tags[i].rx_ts[4], msg->tags[i].rx_ts[3], msg->tags[i].rx_ts[2], msg->tags[i].rx_ts[1], msg->tags[i].rx_ts[0]);
+            uart_puts(s);
 		}
 	}
 
@@ -149,8 +149,8 @@ static void log_anchor_message(sf_anchor_msg_t* msg, uint64_t rx_ts)
 	{
 		if((msg->anchors[i].rx_ts[4] | msg->anchors[i].rx_ts[3] | msg->anchors[i].rx_ts[2] | msg->anchors[i].rx_ts[1] | msg->anchors[i].rx_ts[0]) != 0)
 		{
-            sprintf(s, "5 %d %d %ld 0x%02x%02x%02x%02x%02x\n", msg->hdr.src_id, i, m_superframe_counter, msg->anchors[i].rx_ts[4], msg->anchors[i].rx_ts[3], msg->anchors[i].rx_ts[2], msg->anchors[i].rx_ts[1], msg->anchors[i].rx_ts[0]);
-			uart_puts(s);
+            sprintf(s, "5 %02d %02d %06ld 0x%02x%02x%02x%02x%02x\n", msg->hdr.src_id, i, m_superframe_counter, msg->anchors[i].rx_ts[4], msg->anchors[i].rx_ts[3], msg->anchors[i].rx_ts[2], msg->anchors[i].rx_ts[1], msg->anchors[i].rx_ts[0]);
+            uart_puts(s);
 		}
 	}
 }
@@ -158,9 +158,9 @@ static void log_anchor_message(sf_anchor_msg_t* msg, uint64_t rx_ts)
 static void log_tag_message(sf_tag_msg_t* msg, uint64_t tx_ts)
 {
 	char s[40];
-    sprintf(s, "3 %ld 0x%"PRIx64"\n", m_superframe_counter, tx_ts);
+    sprintf(s, "3 00 00 %06ld 0x%010"PRIx64"\n", m_superframe_counter, tx_ts);
 
-	uart_puts(s);
+    uart_puts(s);
 }
 
 static void transmit_tag_msg() {
@@ -466,7 +466,7 @@ int impl_tag_init()
 
     ble_accs_set_status_callback(ble_accs_status_callback);
     ble_rs_set_tag_mode_callback(ble_rs_mode_callback);
-
+    start_uwb_comm();
 	return 0;
 }
 
