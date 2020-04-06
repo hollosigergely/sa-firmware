@@ -27,22 +27,13 @@ std::string line;
 #define ERROR(str) do { cerr << str << " (line: " << lineCount << " | " << line << ")" << endl; exit(1); } while(0);
 
 void start_new_sf(int sf_id) {
-    static int last_sf_id = 0;
-
     data_idx++;
 
     data["sf_id"].resize(data_idx+1,-1);
     data["sf_id"][data_idx] = sf_id;
 
-    if(sf_id < last_sf_id)
-    {
-        sf_correction++;
-    }
-
-    last_sf_id = sf_id;
-
     data["vsf_id"].resize(data_idx+1,-1);
-    data["vsf_id"][data_idx] = sf_id + sf_correction * 256;
+    data["vsf_id"][data_idx] = sf_id;
 
     if(data["vsf_id"][data_idx - 1] >= data["vsf_id"][data_idx])
     {
