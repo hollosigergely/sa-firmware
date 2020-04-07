@@ -466,7 +466,7 @@ int impl_tag_init()
 
     ble_accs_set_status_callback(ble_accs_status_callback);
     ble_rs_set_tag_mode_callback(ble_rs_mode_callback);
-    start_uwb_comm();
+
 	return 0;
 }
 
