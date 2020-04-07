@@ -6,102 +6,113 @@
 #include <inttypes.h>
 #include <byteswap.h>
 #include <chrono>
+#include <signal.h>
+#include <memory>
+#include "utils.h"
+#include "dump_std.h"
+#include "aggregate.h"
 using namespace std;
 
-#include "../firmware/timing.h"
+#include "timing.h"
+#define TAG "main"
+#define CHECK_LENGTH(x,size) do { if(x != size) WARN("length warn (" << x << " != " << size << ")"); } while(0);
 
 static char buffer[65536];
+static bool isrunning = true;
 
-void myread (int __fd, void *__buf, size_t __nbytes)
+int myread (int __fd, void *__buf, size_t __nbytes)
 {
+	if(!isrunning)
+	{
+		for(int i = 0; i < __nbytes; i++)
+			((uint8_t*)__buf)[i] = 'x';
+		return 0;
+	}
+
 	uint8_t* buf = (uint8_t*)__buf;
 	do {
 		int ret = read(__fd, buf, __nbytes);
+		if(ret < 0)
+			return ret;
+
+		if(ret == 0)
+		{
+			isrunning = false;
+		}
+
 		__nbytes -= ret;
 		buf += ret;
-	} while(__nbytes != 0);
+	} while(__nbytes != 0 && isrunning);
+
+	return 0;
 }
 
-uint64_t pu8_to_u64(uint8_t* ts_tab)
-{
-	uint64_t ts = 0;
-	int i;
-	for (i = 4; i >= 0; i--)
-	{
-		ts <<= 8;
-		ts |= ts_tab[i];
-	}
-	return ts;
+void sigint_handler(int s) {
+	isrunning = false;
 }
 
-int count_not_zero(rx_info_t* info, int size)
-{
-	int count = 0;
-	for(int i = 0; i < size; i++)
-	{
-		if((info[i].rx_ts[0] | info[i].rx_ts[1] | info[i].rx_ts[2] | info[i].rx_ts[3] | info[i].rx_ts[4]) != 0)
-			count++;
-	}
-	return count;
-}
 
 int main(int argc, char** argv)
 {
-    int fd = STDIN_FILENO;
+	//int fd = open("/tmp/build-observer_decoder-GCC_Desktop-Default/a",O_RDONLY);//STDIN_FILENO;
+	int fd = STDIN_FILENO;
 
-	auto start_ts = chrono::system_clock::now();
+	std::shared_ptr<MessageDump> processor(new OstreamMessageDump());
+	if(argc == 2) {
+		processor = make_shared<Aggregate>();
+	}
 
-	uint32_t last_rxts = 0;
-	for(;;) {
+	struct sigaction sigIntHandler;
+	sigIntHandler.sa_handler = sigint_handler;
+	sigemptyset(&sigIntHandler.sa_mask);
+	sigIntHandler.sa_flags = 0;
+	sigaction(SIGINT, &sigIntHandler, NULL);
+
+	for(;isrunning;) {
 		do {
-			read(fd, buffer, 1);
-		} while(buffer[0] != 'x');
+			myread(fd, buffer, 1);
+		} while(buffer[0] != 'x' && isrunning);
 
-		uint16_t length;
-		uint64_t rxts;
+		uint16_t length_u16;
 
-		myread(fd, &length, sizeof(uint16_t));
-		if(length == 0)
+		myread(fd, &length_u16, sizeof(uint16_t));
+		int length = (int)length_u16 - 2;
+		if(length <= 0)
 		{
-			printf("0\n");
+			WARN(TAG,"length <= 0");
 			continue;
 		}
 
+		dwm1000_ts_t rxts;
 		myread(fd, &rxts, sizeof(uint64_t));
 		myread(fd, buffer, length - 2);
 
-		uint32_t rxts_32 = rxts >> 8;
-
-		auto ts = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - start_ts);
-		printf("%10ld %4d %10" PRIx64 " %9.6f %02.6f ",
-			   ts.count(),
-			   length - 2,
-			   rxts,
-			   (double)rxts / (499.2e6 * 128),
-			   (double)(rxts_32 - last_rxts) / (499.2e6 / 2));
-		for(int i = 0; i < length - 2; i++)
-		{
-			printf("%02X", buffer[i] & 0xFF);
-		}
-
 		sf_header_t* hdr = (sf_header_t*)buffer;
-
-		if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
+		switch(hdr->fctrl)
 		{
-			sf_anchor_msg_t* msg = (sf_anchor_msg_t*)buffer;
-			printf("     # AM, src: %04X, trid: %d, txts: %" PRIu64 ", tags: %d, anchors: %d", msg->hdr.src_id, msg->tr_id, pu8_to_u64(msg->tx_ts),
-				   count_not_zero(msg->tags, TIMING_TAG_COUNT), count_not_zero(msg->anchors, TIMING_ANCHOR_COUNT));
-		}
-		else if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE)
-		{
-			sf_tag_msg_t* msg = (sf_tag_msg_t*)buffer;
-			printf("     # TM, src: %04X", msg->hdr.src_id);
+		case SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE:
+			if(length != sizeof(sf_anchor_msg_t))
+			{
+				WARN(TAG,"anchor message length warn (" << length << " != " << sizeof(sf_anchor_msg_t) << ")");
+				continue;
+			}
+			break;
+		case SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE:
+			if(length != sizeof(sf_tag_msg_t))
+			{
+				WARN(TAG,"anchor message length warn (" << length << " != " << sizeof(sf_tag_msg_t) << ")");
+				continue;
+			}
+			break;
+		default:
+			WARN(TAG,"unknown msg type");
+			continue;
 		}
 
-		printf("\n");
-
-		last_rxts = rxts >> 8;
+		processor->dump(rxts, (uint8_t*)buffer, length);
 	}
+
+	processor->end();
 
 	return 0;
 }

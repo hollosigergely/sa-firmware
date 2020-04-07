@@ -128,41 +128,6 @@ static void compensate_frame_timer(uint32_t c)
 	nrf_drv_timer_resume(&m_frame_timer);
 }
 
-static void log_anchor_message(sf_anchor_msg_t* msg, uint64_t rx_ts)
-{
-	char s[40];
-    sprintf(s, "1 00 %02d %06ld 0x%02x%02x%02x%02x%02x\n", msg->hdr.src_id, m_superframe_counter, msg->tx_ts[4], msg->tx_ts[3], msg->tx_ts[2], msg->tx_ts[1], msg->tx_ts[0]);
-    uart_puts(s);
-    sprintf(s, "2 00 %02d %06ld 0x%010"PRIx64"\n", msg->hdr.src_id, m_superframe_counter, rx_ts);
-    uart_puts(s);
-
-	for(int i = 0; i < TIMING_TAG_COUNT; i++)
-	{
-		if((msg->tags[i].rx_ts[4] | msg->tags[i].rx_ts[3] | msg->tags[i].rx_ts[2] | msg->tags[i].rx_ts[1] | msg->tags[i].rx_ts[0]) != 0)
-		{
-            sprintf(s, "4 %02d %02d %06ld 0x%02x%02x%02x%02x%02x\n", msg->hdr.src_id,i, m_superframe_counter, msg->tags[i].rx_ts[4], msg->tags[i].rx_ts[3], msg->tags[i].rx_ts[2], msg->tags[i].rx_ts[1], msg->tags[i].rx_ts[0]);
-            uart_puts(s);
-		}
-	}
-
-	for(int i = 0; i < TIMING_ANCHOR_COUNT; i++)
-	{
-		if((msg->anchors[i].rx_ts[4] | msg->anchors[i].rx_ts[3] | msg->anchors[i].rx_ts[2] | msg->anchors[i].rx_ts[1] | msg->anchors[i].rx_ts[0]) != 0)
-		{
-            sprintf(s, "5 %02d %02d %06ld 0x%02x%02x%02x%02x%02x\n", msg->hdr.src_id, i, m_superframe_counter, msg->anchors[i].rx_ts[4], msg->anchors[i].rx_ts[3], msg->anchors[i].rx_ts[2], msg->anchors[i].rx_ts[1], msg->anchors[i].rx_ts[0]);
-            uart_puts(s);
-		}
-	}
-}
-
-static void log_tag_message(sf_tag_msg_t* msg, uint64_t tx_ts)
-{
-	char s[40];
-    sprintf(s, "3 00 00 %06ld 0x%010"PRIx64"\n", m_superframe_counter, tx_ts);
-
-    uart_puts(s);
-}
-
 static void transmit_tag_msg() {
 	sf_tag_msg_t	msg;
 	msg.hdr.src_id = m_tag_id;
@@ -182,8 +147,6 @@ static void transmit_tag_msg() {
 	{
 		LOGE(TAG, "err: starttx\n");
 	}
-
-    log_tag_message(&msg, tx_ts.ts);
 
     ranging_on_tag_tx(tx_ts);
 }
@@ -305,7 +268,6 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 
 				m_received_sync_messages_count++;
 				m_unsynced_sf_count = 0;
-                log_anchor_message(msg,rx_ts.ts);
 
                 switch(m_tag_mode)
                 {
