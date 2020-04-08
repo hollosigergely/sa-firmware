@@ -143,7 +143,7 @@ int main(void)
     LOGI(TAG,"--> start app <--\n");
 
 	nrf_delay_ms(50);
-    addr_handler_init();
+
 
     APP_SCHED_INIT(
                 ENSURE_ALIGN(MAX(MAX(
@@ -162,6 +162,7 @@ int main(void)
         impl_observer_init();
     }
     else {
+		addr_handler_init();
         if(!addr_handler_is_anchor())
         {
             ret_code_t err_code;
