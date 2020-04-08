@@ -50,6 +50,7 @@ static uint8_t					m_received_sync_messages_count = 0;
 static uint8_t					m_unsynced_sf_count = 0;
 static uint16_t                 m_superframe_ts = 0;
 static uint8_t                  m_tag_mode = TAG_MODE_POWERDOWN;
+static rx_info_t				m_anchor_rx_infos[TIMING_ANCHOR_COUNT];
 
 static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context);
 static void restart_frame_timer();
@@ -132,12 +133,14 @@ static void transmit_tag_msg() {
 	sf_tag_msg_t	msg;
 	msg.hdr.src_id = m_tag_id;
 	msg.hdr.fctrl = SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE;
+	msg.tr_id = m_superframe_id;
 
     uint64_t sys_ts = dwm1000_get_system_time_u64().ts;
 	uint32_t tx_ts_32 = (sys_ts + (TIMING_MESSAGE_TX_PREFIX_TIME_US * UUS_TO_DWT_TIME)) >> 8;
     dwm1000_ts_t tx_ts = { .ts = (((uint64_t)(tx_ts_32 & 0xFFFFFFFEUL)) << 8) };
 
-	//dwm1000_timestamp_u64_to_pu8(tx_ts, msg.tx_ts);
+	dwm1000_ts_to_pu8(tx_ts, msg.tx_ts);
+	memcpy(msg.anchors, m_anchor_rx_infos, sizeof(rx_info_t) * TIMING_ANCHOR_COUNT);
 
 	dwt_forcetrxoff();
 	dwt_writetxdata(sizeof(sf_tag_msg_t) + 2, (uint8_t*)&msg, 0);
@@ -221,6 +224,8 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
             }
             break;
         }
+
+		memset(m_anchor_rx_infos, 0, sizeof(rx_info_t) * TIMING_ANCHOR_COUNT);
 	}
 
 	if(m_tag_state == TAG_STATE__DISCOVERY)
@@ -278,6 +283,8 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
                     ranging_anchor_on_anchor_rx(rx_ts, msg);
                     break;
                 }
+
+				dwm1000_ts_to_pu8(rx_ts, m_anchor_rx_infos[hdr->src_id].rx_ts);
 			}
 		}
 		else if(event_type == EVENT_TIMER)
@@ -422,12 +429,14 @@ int impl_tag_init()
     ranging_init(m_tag_id);
     ranging_anchor_init();
 
-    uart_init();
+	//uart_init();
 
     accel_init(acc_measurement_sched_handler);
 
     ble_accs_set_status_callback(ble_accs_status_callback);
     ble_rs_set_tag_mode_callback(ble_rs_mode_callback);
+
+	ble_rs_mode_callback(TAG_MODE_TAG_RANGING);
 
 	return 0;
 }

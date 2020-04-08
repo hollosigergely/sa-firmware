@@ -52,6 +52,7 @@ add_definitions(-D__HEAP_SIZE=0 -D__STACK_SIZE=16384)
 set(SRCS
       ${PROJECT_SOURCE_DIR}/main.c
       ${PROJECT_SOURCE_DIR}/log.c
+      ${PROJECT_SOURCE_DIR}/crc.c
       ${PROJECT_SOURCE_DIR}/address_handler.c
       ${PROJECT_SOURCE_DIR}/dwm_utils.c
       ${PROJECT_SOURCE_DIR}/impl_observer.c

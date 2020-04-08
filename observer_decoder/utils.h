@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <iostream>
 
-#define WARN(TAG,x)        (cerr << "[" TAG "] " << x << endl)
+#define LOG(TAG,x)          (cerr << "[" TAG ", I] " << x << endl)
+#define WARN(TAG,x)        (cerr << "[" TAG ", W] " << x << endl)
 
 typedef union {
     uint64_t    ts;

@@ -11,6 +11,7 @@ Aggregate::Aggregate()
 	this->mData_idx = -1;
 	this->mLastSFSlot = TIMING_ANCHOR_COUNT + TIMING_TAG_COUNT - 1;
 	this->mLastSFStartTs.ts = 0;
+	this->mLastProcessInfoTs = std::chrono::system_clock::now();
 }
 
 void Aggregate::start_new_sf(int sf_id, dwm1000_ts_t rx_ts)
@@ -98,6 +99,13 @@ void Aggregate::dump(dwm1000_ts_t rx_ts, uint8_t *buffer, size_t length)
 {
 	mPacketID++;
 
+	auto now = std::chrono::system_clock::now();
+	if(chrono::duration_cast<chrono::seconds>(now - mLastProcessInfoTs).count() >= 5)
+	{
+		LOG(TAG, "processed " << mPacketID << " packets (" << mData_idx << " superframes)");
+		mLastProcessInfoTs = now;
+	}
+
 	int sfSlot = get_sf_slot(buffer);
 	if(sfSlot < 0)
 	{
@@ -105,12 +113,24 @@ void Aggregate::dump(dwm1000_ts_t rx_ts, uint8_t *buffer, size_t length)
 		return;
 	}
 
-	if(sfSlot <= mLastSFSlot)
+	sf_header_t* hdr = (sf_header_t*)buffer;
+
+	uint8_t tr_id;
+	switch(hdr->fctrl)
 	{
-		start_new_sf(0, rx_ts);
+	case SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE:
+		tr_id = ((sf_anchor_msg_t*)buffer)->tr_id;
+		break;
+	case SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE:
+		tr_id = ((sf_tag_msg_t*)buffer)->tr_id;
+		break;
 	}
 
-	sf_header_t* hdr = (sf_header_t*)buffer;
+	if(sfSlot <= mLastSFSlot)
+	{
+		start_new_sf(tr_id, rx_ts);
+	}
+
 	switch(hdr->fctrl)
 	{
 	case SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE:
@@ -134,12 +154,43 @@ void Aggregate::dump(dwm1000_ts_t rx_ts, uint8_t *buffer, size_t length)
 						insert_ts(ss.str(), msg->tr_id, ts.ts, msg->hdr.src_id >= aidx);
 					}
 				}
+
+				for(int tidx = 0; tidx < TIMING_TAG_COUNT; tidx++)
+				{
+					dwm1000_ts_t ts = Utils::dwm1000_pu8_to_ts(msg->tags[tidx].rx_ts);
+
+					if(ts.ts != 0)
+					{
+						stringstream ss;
+						ss << "T" << tidx << ".A" << msg->hdr.src_id << ".rx";
+						insert_ts(ss.str(), msg->tr_id, ts.ts, false);
+					}
+				}
 			}
 		}
 		break;
 	case SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE:
 		{
+			sf_tag_msg_t* msg = (sf_tag_msg_t*)buffer;
 
+			if(mData_idx >= 0)
+			{
+				stringstream ss;
+				ss << "T" << msg->hdr.src_id << ".tx";
+				insert_ts(ss.str(), msg->tr_id, Utils::dwm1000_pu8_to_ts(msg->tx_ts).ts, true);
+
+				for(int aidx = 0; aidx < TIMING_ANCHOR_COUNT; aidx++)
+				{
+					dwm1000_ts_t ts = Utils::dwm1000_pu8_to_ts(msg->anchors[aidx].rx_ts);
+
+					if(ts.ts != 0)
+					{
+						stringstream ss;
+						ss << "A" << aidx << ".T" << msg->hdr.src_id << ".rx";
+						insert_ts(ss.str(), msg->tr_id, ts.ts, true);
+					}
+				}
+			}
 		}
 		break;
 	}

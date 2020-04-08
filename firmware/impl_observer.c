@@ -9,6 +9,7 @@
 
 #include "uart.h"
 #include "app_error.h"
+#include "crc.h"
 
 #define TAG "obs"
 
@@ -17,19 +18,28 @@ static uint8_t	m_rx_buffer[DW1000_RX_BUFFER_SIZE];
 
 static void mac_rxok_callback_impl(const dwt_cb_data_t *data)
 {
-	if(data->datalength - 2 > DW1000_RX_BUFFER_SIZE)
+	if(data->datalength - 2 > DW1000_RX_BUFFER_SIZE || data->datalength < 2)
 	{
 		dwt_rxenable(0);
 		return;
 	}
 
-	dwt_readrxdata(m_rx_buffer, data->datalength - 2, 0);
+	uint16_t data_length = data->datalength - 2;
+
+	dwt_readrxdata(m_rx_buffer, data_length, 0);
     dwm1000_ts_t rxts = dwm1000_get_rx_timestamp_u64();
 
+	crc_t crc = crc_init();
+	crc = crc_update(crc, &data_length, sizeof(uint16_t));
+	crc = crc_update(crc, &rxts.ts, sizeof(uint64_t));
+	crc = crc_update(crc, m_rx_buffer, data_length);
+	crc = crc_finalize(crc);
+
 	uart_put((uint8_t*)"x",1);
-	uart_put((uint8_t*)&data->datalength, sizeof(uint16_t));
+	uart_put((uint8_t*)&data_length, sizeof(uint16_t));
     uart_put((uint8_t*)&rxts.ts, sizeof(uint64_t));
-	uart_put((uint8_t*)m_rx_buffer, data->datalength - 2);
+	uart_put((uint8_t*)m_rx_buffer, data_length);
+	uart_put((uint8_t*)&crc, sizeof(crc_t));
 
 	dwt_rxenable(0);
 }

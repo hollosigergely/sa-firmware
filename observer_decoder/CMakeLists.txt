@@ -9,7 +9,8 @@ add_executable(${PROJECT_NAME}
     dump.cpp
     utils.cpp
     dump_std.cpp
-    aggregate.cpp)
+    aggregate.cpp
+    crc.c)
 
 include_directories(
     ../firmware

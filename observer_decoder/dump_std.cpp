@@ -20,6 +20,33 @@ int OstreamMessageDump::count_not_zero(rx_info_t* info, int size)
 	return count;
 }
 
+void OstreamMessageDump::printMessageHex(uint8_t* buffer, size_t length)
+{
+	const char* prefix = "    ";
+	const int   line_bytes = 16;
+
+	int lines = length/line_bytes + 1;
+	for(int line = 0; line < lines; line++)
+	{
+		printf("%s%06X: ", prefix, line * line_bytes);
+		for(int idx = 0; idx < line_bytes; idx++)
+		{
+			int array_idx = line * line_bytes + idx;
+			if(array_idx >= length)
+			{
+				printf("\n");
+				return;
+			}
+
+			if(idx % 2 == 0)
+				printf(" ");
+
+			printf("%02X", buffer[array_idx]);
+		}
+		printf("\n");
+	}
+}
+
 void OstreamMessageDump::dump(dwm1000_ts_t rx_ts, uint8_t *buffer, size_t length)
 {
 	mPacketID++;
@@ -29,7 +56,7 @@ void OstreamMessageDump::dump(dwm1000_ts_t rx_ts, uint8_t *buffer, size_t length
 	double rx_ts_diff = rx_ts_sec - mLastRXTs;
 	rx_ts_diff = (rx_ts_diff < 0)?(rx_ts_diff + 17.207401):(rx_ts_diff);
 
-	printf("%05d %10ld %4d %010" PRIx64 " %9.6f %02.6f ",
+	printf("%05d %010ld %04d %010" PRIx64 " %9.6f %02.6f\n",
 		   mPacketID,
 		   ts.count(),
 		   (int)length,
@@ -37,25 +64,22 @@ void OstreamMessageDump::dump(dwm1000_ts_t rx_ts, uint8_t *buffer, size_t length
 		   rx_ts_sec,
 		   rx_ts_diff);
 
-	for(int i = 0; i < length - 2; i++)
-	{
-		printf("%02X", buffer[i] & 0xFF);
-	}
+	printMessageHex(buffer, length);
 
 	sf_header_t* hdr = (sf_header_t*)buffer;
 	if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
 	{
 		sf_anchor_msg_t* msg = (sf_anchor_msg_t*)buffer;
-		printf("     # AM, src: %04X, trid: %d, txts: %" PRIu64 ", tags: %d, anchors: %d", msg->hdr.src_id, msg->tr_id, Utils::dwm1000_pu8_to_ts(msg->tx_ts).ts,
+		printf("      # AM, src: %04X, trid: %d, txts: %" PRIu64 ", tags: %d, anchors: %d", msg->hdr.src_id, msg->tr_id, Utils::dwm1000_pu8_to_ts(msg->tx_ts).ts,
 			   count_not_zero(msg->tags, TIMING_TAG_COUNT), count_not_zero(msg->anchors, TIMING_ANCHOR_COUNT));
 	}
 	else if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE)
 	{
 		sf_tag_msg_t* msg = (sf_tag_msg_t*)buffer;
-		printf("     # TM, src: %04X", msg->hdr.src_id);
+		printf("      # TM, src: %04X, trid: %d, txts: %" PRIu64 "", msg->hdr.src_id, msg->tr_id, Utils::dwm1000_pu8_to_ts(msg->tx_ts).ts);
 	}
 
-	printf("\n");
+	printf("\n\n");
 
 	mLastRXTs = rx_ts_sec;
 }

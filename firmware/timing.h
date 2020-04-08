@@ -44,6 +44,11 @@ typedef struct {
 
 typedef struct {
     sf_header_t     hdr;
+
+	uint8_t         tr_id;
+	uint8_t         tx_ts[5];
+
+	rx_info_t       anchors[TIMING_ANCHOR_COUNT];
 } __attribute__((packed)) sf_tag_msg_t;
 
 #define SF_MAX_MESSAGE_SIZE    (sizeof(sf_anchor_msg_t))

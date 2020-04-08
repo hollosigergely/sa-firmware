@@ -12,6 +12,7 @@ private:
     std::chrono::time_point<std::chrono::system_clock>        mStartTS;
 
     int             count_not_zero(rx_info_t* info, int size);
+    void            printMessageHex(uint8_t* buffer, size_t length);
 public:
     OstreamMessageDump();
 
