@@ -40,6 +40,7 @@ LIS2DH12_INSTANCE_DEF(m_lis2dh12, &m_nrf_twi_sensor, LIS2DH12_BASE_ADDRESS_HIGH)
 static uint8_t                      m_reg_value;
 static df_accel_info_t              m_sample;
 static app_sched_event_handler_t    m_event_handler = NULL;
+static bool							m_enabled = false;
 
 static void accel_print_identity(ret_code_t result, void * p_register_data)
 {
@@ -195,6 +196,9 @@ void accel_init(app_sched_event_handler_t handler)
 
 void accel_enable()
 {
+	if(m_enabled)
+		return;
+
     ret_code_t err_code;
 
     LIS2DH12_DATA_CFG(m_lis2dh12, LIS2DH12_ODR_50HZ, false, true, true, true, LIS2DH12_SCALE_4G, false);
@@ -202,10 +206,15 @@ void accel_enable()
     APP_ERROR_CHECK(err_code);
 
     utils_start_tick_timer();
+
+	m_enabled = true;
 }
 
 void accel_disable()
 {
+	if(!m_enabled)
+		return;
+
     ret_code_t err_code;
 
     LIS2DH12_DATA_CFG(m_lis2dh12, LIS2DH12_ODR_POWERDOWN, false, true, true, true, LIS2DH12_SCALE_4G, false);
@@ -213,4 +222,6 @@ void accel_disable()
     APP_ERROR_CHECK(err_code);
 
     utils_stop_tick_timer();
+
+	m_enabled = false;
 }
