@@ -8,10 +8,15 @@
 
 #define TAG "rs"
 
+#define RS_MODE_POWER_DOWN      0x00
+#define RS_MODE_TAG_RANGING     0x01
+#define RS_MODE_ANCHOR_RANGING  0x02
+#define RS_MODE_DEBUG           0x03
+
 static ble_rs_t m_rs;
 static df_device_info_t m_device_info;
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;
-
+static uint8_t m_ble_rs_mode = 0;
 
 uint32_t ble_rs_init()
 {
@@ -107,6 +112,15 @@ static void on_mode_changed_sched_handler(void *p_event_data, uint16_t event_siz
         m_rs.mode_callback(*status);
 }
 
+static void set_rs_mode(uint8_t rs_mode) {
+    m_ble_rs_mode = rs_mode;
+    uint8_t mode = m_ble_rs_mode;
+    if(mode == RS_MODE_DEBUG)
+        mode = TAG_MODE_TAG_RANGING;
+
+    app_sched_event_put((const void*)&mode, sizeof(uint8_t), on_mode_changed_sched_handler);
+}
+
 void ble_rs_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
 {
     ble_rs_t * p_rs = (ble_rs_t *)p_context;
@@ -121,9 +135,9 @@ void ble_rs_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
             LOGI(TAG,"Disconnected, RS\n");
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
 
+            if(m_ble_rs_mode != RS_MODE_DEBUG)
             {
-                uint8_t mode = TAG_MODE_POWERDOWN;
-                app_sched_event_put((const void*)&mode, sizeof(uint8_t), on_mode_changed_sched_handler);
+                set_rs_mode(RS_MODE_POWER_DOWN);
             }
             break;
         case BLE_GATTS_EVT_WRITE:
@@ -132,7 +146,7 @@ void ble_rs_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
                 if(p_evt_write->handle == m_rs.mode_char_handles.value_handle &&
                         p_evt_write->len == sizeof(uint8_t))
                 {
-                    app_sched_event_put((const void*)&p_evt_write->data[0], sizeof(uint8_t), on_mode_changed_sched_handler);
+                    set_rs_mode(p_evt_write->data[0]);
                 }
             }
             break;
