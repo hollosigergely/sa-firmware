@@ -26,7 +26,7 @@ void addr_handler_init() {
     m_mac_address &= 0x0000ffffffffffff;
     m_mac_address |= 0x0000c00000000000;
 
-    LOGI(TAG,"MAC addr: 0x%" PRIX64 "\n", m_mac_address);
+	LOGI(TAG, "MAC addr: 0x%" PRIX64 "\n", m_mac_address);
     LOGT(TAG, "UICR: 0x%08X\n", *((uint32_t*)&m_uicr_data));
 
 	if(*(uint32_t*)&m_uicr_data == 0xFFFFFFFF)

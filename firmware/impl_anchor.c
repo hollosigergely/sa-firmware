@@ -250,10 +250,17 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 	}
 	else if(m_anchor_state == ANCHOR_STATE__SENDING_ANCHOR_MSG)
 	{
-		set_frame_timer(TIMING_ANCHOR_COUNT * TIMING_ANCHOR_MESSAGE_LENGTH_US);
-		set_anchor_state(ANCHOR_STATE__AFTER_ANCHOR_MSG);
-		memset(m_tag_infos,0,TIMING_TAG_COUNT * sizeof(rx_info_t));
-		//dwt_rxenable(0);
+		if(m_anchor_id + 1 == TIMING_ANCHOR_COUNT)
+		{
+			set_anchor_state(ANCHOR_STATE__TAG_FRAME);
+			memset(m_tag_infos,0,TIMING_TAG_COUNT * sizeof(rx_info_t));
+		}
+		else
+		{
+			set_frame_timer(TIMING_ANCHOR_COUNT * TIMING_ANCHOR_MESSAGE_LENGTH_US);
+			set_anchor_state(ANCHOR_STATE__AFTER_ANCHOR_MSG);
+			memset(m_tag_infos,0,TIMING_TAG_COUNT * sizeof(rx_info_t));
+		}
 	}
 	else if(m_anchor_state == ANCHOR_STATE__AFTER_ANCHOR_MSG)
 	{

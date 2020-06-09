@@ -65,6 +65,7 @@ void impl_observer_init()
 
     dwm1000_irq_enable();
 	uart_init();
+	//uart_test(true);
 
 	LOGI(TAG,"initialize dw1000 phy\n");
 	dwm1000_phy_init();
