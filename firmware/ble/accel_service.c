@@ -13,6 +13,8 @@ static ble_accs_status_callback_t   m_status_callback = NULL;
 
 uint32_t ble_accs_init(ble_accs_status_callback_t cb)
 {
+	LOGI(TAG,"Data format: %d\n", sizeof(df_accel_mode_t));
+
     ble_accs_t* p_accs = &m_accs;
     m_status_callback = cb;
 
@@ -49,8 +51,8 @@ uint32_t ble_accs_init(ble_accs_status_callback_t cb)
     memset(&add_char_params, 0, sizeof(add_char_params));
     add_char_params.uuid              = ACCS_UUID_CONTROL_CHAR;
     add_char_params.uuid_type         = p_accs->uuid_type;
-    add_char_params.init_len          = sizeof(uint8_t);
-    add_char_params.max_len           = sizeof(uint8_t);
+	add_char_params.init_len          = sizeof(df_accel_mode_t);
+	add_char_params.max_len           = sizeof(df_accel_mode_t);
     add_char_params.p_init_value      = &status_value;
     add_char_params.char_props.read   = 1;
     add_char_params.char_props.write  = 1;
@@ -67,10 +69,10 @@ uint32_t ble_accs_init(ble_accs_status_callback_t cb)
 
 static void on_status_changed_sched_handler(void *p_event_data, uint16_t event_size)
 {
-    uint8_t* status = (uint8_t*)p_event_data;
+	df_accel_mode_t* status = (df_accel_mode_t*)p_event_data;
 
     if(m_status_callback != NULL &&
-            event_size == sizeof(uint8_t))
+			event_size == sizeof(df_accel_mode_t))
         m_status_callback(*status);
 }
 
@@ -87,17 +89,20 @@ void ble_accs_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
         m_conn_handle = BLE_CONN_HANDLE_INVALID;
 
         {
-            uint8_t status = 0;
-            app_sched_event_put((const void*)&status, sizeof(uint8_t), on_status_changed_sched_handler);
+			df_accel_mode_t status = {
+				.mode = ACCS_MODE_POWERDOWN,
+				.hpf_enabled = false
+			};
+			app_sched_event_put((const void*)&status, sizeof(df_accel_mode_t), on_status_changed_sched_handler);
         }
         break;
     case BLE_GATTS_EVT_WRITE:
         {
             ble_gatts_evt_write_t const * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
             if(p_evt_write->handle == m_accs.control_char_handles.value_handle &&
-                    p_evt_write->len == sizeof(uint8_t))
+					p_evt_write->len == sizeof(df_accel_mode_t))
             {
-                app_sched_event_put((const void*)&p_evt_write->data[0], sizeof(uint8_t), on_status_changed_sched_handler);
+				app_sched_event_put((const void*)&p_evt_write->data[0], sizeof(df_accel_mode_t), on_status_changed_sched_handler);
             }
         }
         break;

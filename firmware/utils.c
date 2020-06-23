@@ -5,9 +5,13 @@
 #include "nrf_log_ctrl.h"
 #include "nrfx_rtc.h"
 #include "app_util.h"
+#include "log.h"
+
+#define TAG "utils"
 
 const static nrf_drv_timer_t m_execution_timer = NRF_DRV_TIMER_INSTANCE(4);
 const nrfx_rtc_t m_tick_timer = NRFX_RTC_INSTANCE(2);
+static int m_tick_timer_ref_counter = 0;
 
 void utils_init()
 {
@@ -40,20 +44,36 @@ static void rtc_handler(nrfx_rtc_int_type_t int_type)
 
 }
 
-void utils_start_tick_timer() {
+void utils_use_tick_timer() {
     ret_code_t err_code;
 
-    nrfx_rtc_config_t config = NRFX_RTC_DEFAULT_CONFIG;
-    config.prescaler = 32;      // 1.007 ms
-    err_code = nrfx_rtc_init(&m_tick_timer, &config, rtc_handler);
-    APP_ERROR_CHECK(err_code);
+	if(m_tick_timer_ref_counter == 0)
+	{
+		nrfx_rtc_config_t config = NRFX_RTC_DEFAULT_CONFIG;
+		config.prescaler = 32;      // 1.007 ms
+		err_code = nrfx_rtc_init(&m_tick_timer, &config, rtc_handler);
+		APP_ERROR_CHECK(err_code);
 
-    nrfx_rtc_enable(&m_tick_timer);
+		nrfx_rtc_enable(&m_tick_timer);
+
+		LOGI(TAG,"tick timer started\n");
+	}
+
+	m_tick_timer_ref_counter++;
 }
 
-void utils_stop_tick_timer() {
-    nrfx_rtc_disable(&m_tick_timer);
-    nrfx_rtc_uninit(&m_tick_timer);
+void utils_release_tick_timer() {
+	m_tick_timer_ref_counter--;
+	if(m_tick_timer_ref_counter<0)
+		m_tick_timer_ref_counter = 0;
+
+	if(m_tick_timer_ref_counter == 0)
+	{
+		nrfx_rtc_disable(&m_tick_timer);
+		nrfx_rtc_uninit(&m_tick_timer);
+
+		LOGI(TAG,"tick timer stopped\n");
+	}
 }
 
 uint32_t utils_get_tick_time() {

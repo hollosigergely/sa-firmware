@@ -17,8 +17,21 @@
 #define ACCS_UUID_CONTROL_CHAR  0x2001
 #define ACCS_UUID_SENSOR_CHAR  0x2002
 
+typedef enum  {
+	ACCS_MODE_POWERDOWN = 0x00,
+	ACCS_MODE_1HZ = 0x01,
+	ACCS_MODE_10HZ = 0x02,
+	ACCS_MODE_25HZ = 0x03,
+	ACCS_MODE_50HZ = 0x04,
+} accs_mode_t;
+
+typedef struct {
+	accs_mode_t		mode:3;
+	bool			hpf_enabled:1;
+} __attribute__((packed)) df_accel_mode_t;
+
 typedef struct ble_accs_s ble_accs_t;
-typedef void (*ble_accs_status_callback_t)(bool enabled);
+typedef void (*ble_accs_status_callback_t)(df_accel_mode_t mode);
 
 struct ble_accs_s
 {

@@ -12,7 +12,6 @@
 #define ACCEL_SCHED_EVENT_SIZE            (sizeof(accel_event_t))
 
 void accel_init(app_sched_event_handler_t handler);
-void accel_enable();
-void accel_disable();
+void accel_state(lis2dh12_odr_t odr, bool hpf_enabled);
 
 #endif	// ACCEL_H_

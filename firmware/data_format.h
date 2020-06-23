@@ -24,6 +24,7 @@ typedef struct {
     lis2dh12_data_t         values[ACCEL_FIFO_BURST_SIZE];
 } __attribute__((packed)) df_accel_info_t;
 
+
 typedef struct {
     uint16_t                group_id;
     uint16_t                dev_id;

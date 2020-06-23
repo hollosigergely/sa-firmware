@@ -367,17 +367,28 @@ static void stop_uwb_comm() {
     dwm1000_phy_release();
 }
 
-static void ble_accs_status_callback(bool enabled)
+static void ble_accs_status_callback(df_accel_mode_t mode)
 {
-    LOGI(TAG,"accel status: %d\n", enabled);
-    if(enabled)
-    {
-        accel_enable();
-    }
-    else
-    {
-        accel_disable();
-    }
+	LOGI(TAG,"accel status: %02X\n", *((uint8_t*)&mode));
+
+	switch(mode.mode)
+	{
+	case ACCS_MODE_POWERDOWN:
+		accel_state(LIS2DH12_ODR_POWERDOWN, mode.hpf_enabled);
+		break;
+	case ACCS_MODE_1HZ:
+		accel_state(LIS2DH12_ODR_1HZ, mode.hpf_enabled);
+		break;
+	case ACCS_MODE_10HZ:
+		accel_state(LIS2DH12_ODR_10HZ, mode.hpf_enabled);
+		break;
+	case ACCS_MODE_25HZ:
+		accel_state(LIS2DH12_ODR_25HZ, mode.hpf_enabled);
+		break;
+	case ACCS_MODE_50HZ:
+		accel_state(LIS2DH12_ODR_50HZ, mode.hpf_enabled);
+		break;
+	}
 }
 
 static void ble_rs_mode_callback(tag_mode_t mode)
@@ -393,12 +404,14 @@ static void ble_rs_mode_callback(tag_mode_t mode)
             (mode == TAG_MODE_TAG_RANGING || mode == TAG_MODE_ANCHOR_RANGING))
     {
         start_uwb_comm();
+		utils_use_tick_timer();
     }
 
     if((m_tag_mode == TAG_MODE_TAG_RANGING || m_tag_mode == TAG_MODE_ANCHOR_RANGING) &&
             mode == TAG_MODE_POWERDOWN)
     {
         stop_uwb_comm();
+		utils_release_tick_timer();
     }
 
     m_tag_mode = mode;
