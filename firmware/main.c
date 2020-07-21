@@ -16,6 +16,7 @@
 #include "nrf_drv_timer.h"
 #include "nrf_drv_saadc.h"
 #include "nrf_drv_uart.h"
+#include "nrf_drv_clock.h"
 #include "nrf_delay.h"
 #include "app_uart.h"
 #include "nrf_drv_twi.h"
@@ -169,13 +170,16 @@ int main(void)
             err_code = nrf_sdh_enable_request();
             ERROR_CHECK(err_code, NRF_SUCCESS);
 
-            sd_clock_hfclk_request();
+			sd_clock_hfclk_request();
             ble_func_init(addr_handler_get_device_name());
 
             impl_tag_init();
         }
         else
         {
+			nrf_drv_clock_hfclk_request(NULL);
+			do {} while(!nrf_drv_clock_hfclk_is_running());
+
             impl_anchor_init();
         }
     }
