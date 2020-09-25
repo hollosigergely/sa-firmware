@@ -38,6 +38,17 @@ typedef union {
     uint32_t    ts_low_32;
 } dwm1000_ts_t;
 
+#define RX_QUALITY_FLAG_NLOS    0x01
+#define RX_QUALITY_FLAG_ERR     0x02
+typedef struct
+{
+	uint16_t        rx_noise;
+	uint16_t        rx_fpampl2;
+	uint8_t         rx_flag;
+} dwm1000_rx_quality_t;
+void dwm1000_get_rx_quality_information(dwm1000_rx_quality_t* rxq);
+
+
 dwm1000_ts_t dwm1000_get_system_time_u64(void);
 dwm1000_ts_t dwm1000_get_rx_timestamp_u64(void);
 static inline void dwm1000_ts_to_pu8(dwm1000_ts_t ts, uint8_t* p8)

@@ -51,6 +51,7 @@ static uint8_t					m_unsynced_sf_count = 0;
 static uint16_t                 m_superframe_ts = 0;
 static uint8_t                  m_tag_mode = TAG_MODE_POWERDOWN;
 static rx_info_t				m_anchor_rx_infos[TIMING_ANCHOR_COUNT];
+static dwm1000_rx_quality_t		m_anchor_rx_qualities[TIMING_ANCHOR_COUNT];
 
 static void frame_timer_event_handler(nrf_timer_event_t event_type, void* p_context);
 static void restart_frame_timer();
@@ -258,6 +259,8 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 			sf_header_t* hdr = (sf_header_t*)data;
 			if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
 			{
+				dwm1000_get_rx_quality_information(&m_anchor_rx_qualities[hdr->src_id]);
+
                 dwm1000_ts_t rx_ts = dwm1000_get_rx_timestamp_u64();
 				uint32_t slot_time_us = get_slot_time_by_message(rx_ts);
 				uint32_t sf_time_us = hdr->src_id * TIMING_ANCHOR_MESSAGE_LENGTH_US + slot_time_us;
@@ -313,6 +316,16 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
                 df_ranging_info_t ranging_info;
                 ranging_info.ts = m_superframe_ts;
                 memcpy(ranging_info.values, ranging_get_distances(), TIMING_ANCHOR_COUNT * sizeof(uint16_t));
+				for(int i = 0; i < TIMING_ANCHOR_COUNT; i++)
+				{
+					ranging_info.quality[i] = m_anchor_rx_qualities[i].rx_noise;
+					ranging_info.quality[i] &= 0xFFFE;
+
+					if(m_anchor_rx_qualities[i].rx_flag & RX_QUALITY_FLAG_NLOS)
+					{
+						ranging_info.quality[i] |= 0x0001;
+					}
+				}
 
                 app_sched_event_put(&ranging_info, sizeof(df_ranging_info_t), tag_ranging_sched_handler);
             }
@@ -436,13 +449,8 @@ int impl_tag_init()
 	LOGI(TAG,"addr: %04X\n", m_tag_id);
 	LOGI(TAG,"sf length: %d\n", TIMING_SUPERFRAME_LENGTH_MS);
 
-    //NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
-    //NRF_CLOCK->TASKS_HFCLKSTART = 1;
-
     ranging_init(m_tag_id);
     ranging_anchor_init();
-
-	//uart_init();
 
     accel_init(acc_measurement_sched_handler);
 

@@ -9,6 +9,7 @@ typedef struct
 {
     uint16_t        ts;
     uint16_t        values[TIMING_ANCHOR_COUNT];
+	uint16_t        quality[TIMING_ANCHOR_COUNT];
 } __attribute__((packed)) df_ranging_info_t;
 
 typedef struct

@@ -34,7 +34,6 @@ static inline uint16_t min(uint16_t a, uint16_t b)
 	return (a<b)?(a):(b);
 }
 
-
 static uint8_t m_rx_data[TX_RX_BUF_LENGTH] = {0};
 
 dwm1000_ts_t dwm1000_get_system_time_u64(void)
@@ -49,6 +48,42 @@ dwm1000_ts_t dwm1000_get_rx_timestamp_u64(void)
     dwm1000_ts_t ts = { 0 };
     dwt_readrxtimestamp(ts.ts_bytes);
     return ts;
+}
+
+void dwm1000_get_rx_quality_information(dwm1000_rx_quality_t* rxq)
+{
+	uint32_t fqual1 = dwt_read32bitoffsetreg(RX_FQUAL_ID, 0);
+	uint32_t fqual2 = dwt_read32bitoffsetreg(RX_FQUAL_ID, 4);
+
+	double a = 121.74;  // for 64 MHz PRF
+	uint16_t f1 = dwt_read16bitoffsetreg(RX_TIME_ID, RX_TIME_FP_AMPL1_OFFSET);
+	uint16_t f2 = fqual1 >> 16;
+	uint16_t f3 = fqual2 & 0xFFFF;
+	uint16_t c = fqual2 >> 16;
+	uint16_t n = (dwt_read16bitoffsetreg(RX_FINFO_ID, 2) >> 4);
+	uint16_t nosat = dwt_read16bitoffsetreg(DRX_CONF_ID, 0x2c);
+	if(n == nosat)
+	{
+		n -= 5; // for standard short SFD
+	}
+
+	rxq->rx_flag = 0;
+	rxq->rx_noise = fqual1 & 0xFFFF;
+	rxq->rx_fpampl2 = f2;
+
+	double sz = ((double)f1*(double)f1 + (double)f2*(double)f2 + (double)f3*(double)f3);
+	if(c != 0 && n != 0 && sz != 0)
+	{
+		double rxpower = 10*log10((double)c*131072.0/((double)n*(double)n))-a;
+		double rxpowerfp = 10*log10(sz/((double)n*(double)n))-a;
+
+		if(rxpowerfp - rxpower < -10)
+			rxq->rx_flag |= RX_QUALITY_FLAG_NLOS;
+	}
+	else
+	{
+		rxq->rx_flag |= RX_QUALITY_FLAG_ERR;
+	}
 }
 
 
