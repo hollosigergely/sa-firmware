@@ -94,7 +94,7 @@
 #define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000)                   /**< Time between each call to sd_ble_gap_conn_param_update after the first call (5 seconds). */
 #define MAX_CONN_PARAMS_UPDATE_COUNT    3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
 
-#define ATT_MTU_SIZE                    65
+#define ATT_MTU_SIZE                    67
 static_assert((sizeof(df_accel_info_t) <= (ATT_MTU_SIZE - 3)) &&
                 (sizeof(df_ranging_info_t) <= (ATT_MTU_SIZE - 3)) &&
                 (sizeof(df_anchor_ranging_info_t) <= (ATT_MTU_SIZE - 3)), "Watch out for ATT_MTU size!");

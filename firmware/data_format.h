@@ -7,21 +7,20 @@
 
 typedef struct
 {
-    uint16_t        ts;
+    uint32_t        ts;
     uint16_t        values[TIMING_ANCHOR_COUNT];
-	uint16_t        quality[TIMING_ANCHOR_COUNT];
 } __attribute__((packed)) df_ranging_info_t;
 
 typedef struct
 {
-    uint16_t        ts;
+    uint32_t        ts;
     uint16_t        values[TIMING_ANCHOR_NCOMB2];
 } __attribute__((packed)) df_anchor_ranging_info_t;
 
 #define ACCEL_FIFO_BURST_SIZE             10
 
 typedef struct {
-    uint16_t                ts;
+    uint32_t                ts;
     lis2dh12_data_t         values[ACCEL_FIFO_BURST_SIZE];
 } __attribute__((packed)) df_accel_info_t;
 

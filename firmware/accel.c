@@ -50,7 +50,7 @@ static void accel_get_accel_data_cb(ret_code_t result, lis2dh12_data_t * p_data)
 {
     LOGT(TAG,"accel_cb()\n");
 
-    m_sample.ts = (uint16_t)utils_get_tick_time();
+    m_sample.ts = utils_get_tick_time();
     if(m_event_handler != NULL)
         app_sched_event_put(&m_sample, sizeof(df_accel_info_t), m_event_handler);
 }
@@ -207,14 +207,6 @@ void accel_state(lis2dh12_odr_t odr, bool hpf_enabled)
 	err_code = lis2dh12_cfg_commit(&m_lis2dh12);
 	APP_ERROR_CHECK(err_code);
 
-	if(odr == LIS2DH12_ODR_POWERDOWN)
-	{
-		utils_release_tick_timer();
-	}
-	else
-	{
-		utils_use_tick_timer();
-	}
 
 }
 

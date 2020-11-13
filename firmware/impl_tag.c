@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "address_handler.h"
 
+#include "ble_srv_common.h"
 #include "nrf_gpio.h"
 #include "nrf_drv_gpiote.h"
 #include "nrf_gpiote.h"
@@ -29,6 +30,7 @@
 
 typedef enum {
 	TAG_STATE__DISCOVERY = 0,
+    TAG_STATE__WAIT_START_OF_SF = 2,
 	TAG_STATE__SYNCHRONIZED = 1
 } tag_state_t;
 
@@ -48,7 +50,7 @@ static uint32_t                 m_superframe_counter = 0;
 static uint8_t					m_rx_buffer[SF_MAX_MESSAGE_SIZE];
 static uint8_t					m_received_sync_messages_count = 0;
 static uint8_t					m_unsynced_sf_count = 0;
-static uint16_t                 m_superframe_ts = 0;
+static uint32_t                 m_superframe_ts = 0;
 static uint8_t                  m_tag_mode = TAG_MODE_POWERDOWN;
 static rx_info_t				m_anchor_rx_infos[TIMING_ANCHOR_COUNT];
 static dwm1000_rx_quality_t		m_anchor_rx_qualities[TIMING_ANCHOR_COUNT];
@@ -160,7 +162,7 @@ static void tag_ranging_sched_handler(void *p_event_data, uint16_t event_size)
     LOGI(TAG, "sending ranging (%d)\n", event_size);
 
     df_ranging_info_t* ranging = p_event_data;
-    LOGI(TAG, "ranging ts: %" PRIu16 "\n", ranging->ts);
+    LOGI(TAG, "ranging ts: %" PRIu32 "\n", ranging->ts);
     for(int i = 0; i < TIMING_ANCHOR_COUNT; i++)
     {
         LOGI(TAG, " dist %d: %" PRIu16 "\n", i, ranging->values[i]);
@@ -180,7 +182,7 @@ static void acc_measurement_sched_handler(void * p_event_data, uint16_t event_si
 {
     df_accel_info_t* event = p_event_data;
 
-    LOGT(TAG,"Ts: %" PRIu16 "\n", event->ts);
+    LOGT(TAG,"Ts: %" PRIu32 "\n", event->ts);
     for (uint8_t i = 0; i < ACCEL_FIFO_BURST_SIZE; i++)
     {
         int16_t x = (event->values[i].x);
@@ -200,7 +202,7 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 
 	if(event_type == EVENT_SF_BEGIN)
 	{
-        m_superframe_ts = (uint16_t)utils_get_tick_time();
+        m_superframe_ts = utils_get_tick_time();
 
 		restart_frame_timer();
 		LOGT(TAG, "SF\n");
@@ -238,7 +240,7 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 			sf_header_t* hdr = (sf_header_t*)data;
 			if(hdr->fctrl == SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE)
 			{
-				set_tag_state(TAG_STATE__SYNCHRONIZED);
+                set_tag_state(TAG_STATE__WAIT_START_OF_SF);
 
 				uint32_t slot_time_us = get_slot_time_by_message(dwm1000_get_rx_timestamp_u64());
 				uint32_t sf_time_us = hdr->src_id * TIMING_ANCHOR_MESSAGE_LENGTH_US + slot_time_us;
@@ -252,6 +254,11 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 			}
 		}
 	}
+    else if(m_tag_state == TAG_STATE__WAIT_START_OF_SF)
+    {
+        if(event_type == EVENT_SF_BEGIN)
+            set_tag_state(TAG_STATE__SYNCHRONIZED);
+    }
 	else if(m_tag_state == TAG_STATE__SYNCHRONIZED)
 	{
 		if(event_type == EVENT_RX)
@@ -316,7 +323,7 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
                 df_ranging_info_t ranging_info;
                 ranging_info.ts = m_superframe_ts;
                 memcpy(ranging_info.values, ranging_get_distances(), TIMING_ANCHOR_COUNT * sizeof(uint16_t));
-				for(int i = 0; i < TIMING_ANCHOR_COUNT; i++)
+                /*for(int i = 0; i < TIMING_ANCHOR_COUNT; i++)
 				{
 					ranging_info.quality[i] = m_anchor_rx_qualities[i].rx_noise;
 					ranging_info.quality[i] &= 0xFFFE;
@@ -325,7 +332,7 @@ static void event_handler(event_type_t event_type, const uint8_t* data, uint16_t
 					{
 						ranging_info.quality[i] |= 0x0001;
 					}
-				}
+                }*/
 
                 app_sched_event_put(&ranging_info, sizeof(df_ranging_info_t), tag_ranging_sched_handler);
             }
@@ -417,14 +424,12 @@ static void ble_rs_mode_callback(tag_mode_t mode)
             (mode == TAG_MODE_TAG_RANGING || mode == TAG_MODE_ANCHOR_RANGING))
     {
         start_uwb_comm();
-		utils_use_tick_timer();
     }
 
     if((m_tag_mode == TAG_MODE_TAG_RANGING || m_tag_mode == TAG_MODE_ANCHOR_RANGING) &&
             mode == TAG_MODE_POWERDOWN)
     {
         stop_uwb_comm();
-		utils_release_tick_timer();
     }
 
     m_tag_mode = mode;
@@ -460,5 +465,19 @@ int impl_tag_init()
 	return 0;
 }
 
+static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
+{
+    switch (p_ble_evt->header.evt_id)
+    {
+        case BLE_GAP_EVT_CONNECTED:
+            utils_use_tick_timer();
+            break;
+        case BLE_GAP_EVT_DISCONNECTED:
+            utils_release_tick_timer();
+            break;
+    }
+}
+
+NRF_SDH_BLE_OBSERVER(m_impl_tag_obs, BLE_LBS_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
 
 
