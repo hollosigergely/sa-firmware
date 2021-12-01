@@ -9,6 +9,7 @@ add_executable(${PROJECT_NAME}
     dump.cpp
     utils.cpp
     dump_std.cpp
+    dump_hex.cpp
     aggregate.cpp
     crc.c)
 
