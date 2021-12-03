@@ -10,6 +10,7 @@
 #include <memory>
 #include "utils.h"
 #include "dump_std.h"
+#include "dump_hex.h"
 #include "aggregate.h"
 #include "crc.h"
 using namespace std;
@@ -53,20 +54,20 @@ void sigint_handler(int s) {
 }
 
 void print_usage(char* argv0) {
-	fprintf(stderr, "Usage: %s [-m <dump|aggr>]\n", argv0);
+	fprintf(stderr, "Usage: %s [-m <raw|dump|aggr>]\n", argv0);
 	exit(EXIT_FAILURE);
 }
 
 int main(int argc, char** argv)
 {
-	string	mode = "dump";
+	string	mode = "raw";
 	int		opt;
 	while ((opt = getopt(argc, argv, "m:")) != -1) {
 	   switch (opt) {
 	   case 'm':
 			mode = optarg;
 
-			if(mode != "dump" && mode != "aggr")
+			if(mode != "dump" && mode != "aggr" && mode != "raw")
 			{
 				print_usage(argv[0]);
 			}
@@ -84,8 +85,11 @@ int main(int argc, char** argv)
 	if(mode == "aggr") {
 		processor = make_shared<Aggregate>();
 	}
-	else {
+	else if(mode == "dump") {
 		processor = make_shared<OstreamMessageDump>();
+	}
+	else {
+		processor = make_shared<OstreamHexDump>();
 	}
 
 	struct sigaction sigIntHandler;
@@ -126,26 +130,29 @@ int main(int argc, char** argv)
 			continue;
 		}
 
-		sf_header_t* hdr = (sf_header_t*)buffer;
-		switch(hdr->fctrl)
+		if(mode != "raw")
 		{
-		case SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE:
-			if(length_u16 != sizeof(sf_anchor_msg_t))
+			sf_header_t* hdr = (sf_header_t*)buffer;
+			switch(hdr->fctrl)
 			{
-				WARN(TAG,"anchor message length warn (" << length_u16 << " != " << sizeof(sf_anchor_msg_t) << ")");
+			case SF_HEADER_FCTRL_MSG_TYPE_ANCHOR_MESSAGE:
+				if(length_u16 != sizeof(sf_anchor_msg_t))
+				{
+					WARN(TAG,"anchor message length warn (" << length_u16 << " != " << sizeof(sf_anchor_msg_t) << ")");
+					continue;
+				}
+				break;
+			case SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE:
+				if(length_u16 != sizeof(sf_tag_msg_t))
+				{
+					WARN(TAG,"tag message length warn (" << length_u16 << " != " << sizeof(sf_tag_msg_t) << ")");
+					continue;
+				}
+				break;
+			default:
+				WARN(TAG,"unknown msg type");
 				continue;
 			}
-			break;
-		case SF_HEADER_FCTRL_MSG_TYPE_TAG_MESSAGE:
-			if(length_u16 != sizeof(sf_tag_msg_t))
-			{
-				WARN(TAG,"tag message length warn (" << length_u16 << " != " << sizeof(sf_tag_msg_t) << ")");
-				continue;
-			}
-			break;
-		default:
-			WARN(TAG,"unknown msg type");
-			continue;
 		}
 
 		processor->dump(rxts, (uint8_t*)buffer, length_u16);
