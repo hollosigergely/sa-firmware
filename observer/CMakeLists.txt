@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(observer)
@@ -11,6 +11,7 @@ add_executable(${PROJECT_NAME}
     dump_std.cpp
     dump_hex.cpp
     aggregate.cpp
+    json.cpp
     crc.c)
 
 include_directories(

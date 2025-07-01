@@ -12,6 +12,7 @@
 #include "dump_std.h"
 #include "dump_hex.h"
 #include "aggregate.h"
+#include "json.h"
 #include "crc.h"
 using namespace std;
 
@@ -54,7 +55,7 @@ void sigint_handler(int s) {
 }
 
 void print_usage(char* argv0) {
-	fprintf(stderr, "Usage: %s [-m <raw|dump|aggr>]\n", argv0);
+	fprintf(stderr, "Usage: %s [-m <raw|dump|json|aggr>]\n", argv0);
 	exit(EXIT_FAILURE);
 }
 
@@ -67,7 +68,7 @@ int main(int argc, char** argv)
 	   case 'm':
 			mode = optarg;
 
-			if(mode != "dump" && mode != "aggr" && mode != "raw")
+			if(mode != "dump" && mode != "aggr" && mode != "raw" && mode != "json")
 			{
 				print_usage(argv[0]);
 			}
@@ -87,6 +88,9 @@ int main(int argc, char** argv)
 	}
 	else if(mode == "dump") {
 		processor = make_shared<OstreamMessageDump>();
+	}
+	else if(mode == "json") {
+		processor = make_shared<JSON>();
 	}
 	else {
 		processor = make_shared<OstreamHexDump>();
